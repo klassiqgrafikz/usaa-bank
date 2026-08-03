@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+
+  --color-usaa-50: #eef4fb;
+  --color-usaa-100: #d8e6f6;
+  --color-usaa-200: #b3cdea;
+  --color-usaa-300: #7fa9d8;
+  --color-usaa-400: #4a82c2;
+  --color-usaa-500: #2a63a8;
+  --color-usaa-600: #1d4f91;
+  --color-usaa-700: #153f76;
+  --color-usaa-800: #10325c;
+  --color-usaa-900: #0b2342;
+  --color-usaa-950: #071832;
+
+  --color-crimson-500: #e0342c;
+  --color-crimson-600: #c8102e;
+  --color-crimson-700: #a50d26;
+
+  --color-gold-400: #ffc857;
+  --color-gold-500: #f0ab00;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #fff;
+  color: var(--color-usaa-950);
+  -webkit-font-smoothing: antialiased;
+}
+
+.card {
+  @apply rounded-lg border border-slate-200 bg-white shadow-sm;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-md bg-crimson-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-crimson-700 focus:outline-none focus:ring-2 focus:ring-crimson-500/40 disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-usaa-800 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-usaa-500/30 disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-usaa-700 transition-colors hover:bg-usaa-50;
+}
+
+.input {
+  @apply w-full rounded-md border border-slate-300 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-usaa-500 focus:outline-none focus:ring-2 focus:ring-usaa-500/20;
+}
+
+.label {
+  @apply mb-1.5 block text-sm font-medium text-slate-700;
+}
+
+.link {
+  @apply font-medium text-usaa-700 underline-offset-2 hover:underline;
+}
+
+.sidebar-link {
+  @apply flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-200 transition-colors hover:bg-white/10;
+}
+
+.sidebar-link-active {
+  @apply flex items-center gap-3 rounded-md bg-white/15 px-3 py-2 text-sm font-semibold text-white;
+}
+
+.table-h th {
+  @apply border-b border-slate-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500;
+}
+
+.table-h td {
+  @apply border-b border-slate-100 px-4 py-3 text-sm text-slate-800;
+}
