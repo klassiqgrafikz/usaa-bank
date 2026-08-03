@@ -2,7 +2,6 @@
 
 import { useBankData } from "@/lib/use-bank-data";
 import { StatementsClient } from "./statements-client";
-import { isMockMode } from "@/lib/mock";
 
 export default function StatementsPage() {
   const { data, error } = useBankData(async (api) => {
@@ -11,7 +10,7 @@ export default function StatementsPage() {
       api.getTransactions(1000),
     ]);
     return { accounts, transactions };
-  }, [isMockMode()]);
+  });
 
   if (error) return <p className="text-sm text-red-600">{error}</p>;
   if (!data) {

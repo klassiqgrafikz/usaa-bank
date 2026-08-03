@@ -140,8 +140,7 @@ export function AlertsClient({
             ))}
           </div>
           <p className="mt-6 rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-500">
-            Delivery is simulated in this demo. No real emails or push
-            notifications are sent.
+            Alerts are delivered to the email on your account.
           </p>
         </div>
       </div>

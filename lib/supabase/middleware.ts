@@ -43,7 +43,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && isAuthRoute) {
+  if (user && isAuthRoute && !request.nextUrl.pathname.startsWith("/reset-password")) {
     const url = request.nextUrl.clone();
     url.pathname = "/bank/dashboard";
     url.search = "";

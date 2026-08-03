@@ -28,17 +28,15 @@ export function MarketingHeader() {
         </div>
         <div className="flex items-center gap-3">
           <span className="hidden text-xs font-medium text-slate-500 lg:block">
-            For military what we do every member of the armed forces and their
-            families
+            Membership for the armed forces community and their families
           </span>
-          <button className="btn-primary hidden sm:inline-flex">Open Account</button>
+          <Link href="/signup" className="btn-primary hidden sm:inline-flex">
+            Open Account
+          </Link>
           <Link href="/login" className="btn-primary">
             Sign On
           </Link>
         </div>
-      </div>
-      <div className="bg-usaa-800 px-4 py-1.5 text-center text-xs text-white">
-        Demonstration environment — sample data only. Not affiliated with USAA.
       </div>
     </header>
   );

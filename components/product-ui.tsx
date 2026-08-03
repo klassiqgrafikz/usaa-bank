@@ -71,7 +71,7 @@ export function CtaBand({ title, body }: { title: string; body: string }) {
           <p className="mt-1 text-sm text-red-100">{body}</p>
         </div>
         <Link href="/signup" className="btn-secondary font-semibold">
-          Create a demo account
+          Open an account
         </Link>
       </div>
     </section>

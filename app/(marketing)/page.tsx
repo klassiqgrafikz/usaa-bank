@@ -9,8 +9,8 @@ const perks = [
 const steps = [
   {
     n: "01",
-    title: "Create a demo profile",
-    body: "Sign up in under a minute and land on a fully populated sample account overview.",
+    title: "Open your account",
+    body: "Sign up in under a minute and we'll set up your checking, savings and credit card accounts.",
   },
   {
     n: "02",
@@ -19,8 +19,8 @@ const steps = [
   },
   {
     n: "03",
-    title: "Reset anytime",
-    body: "One click restores pristine sample data, so you can demo again and again.",
+    title: "Bank on every device",
+    body: "Secure, two-step sign-on keeps your accounts safe whether you use the web or the app.",
   },
 ];
 
@@ -32,57 +32,47 @@ export default function LandingPage() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm">
               <span className="h-2 w-2 rounded-full bg-gold-400" />
-              Online banking demo portal
+              Online banking portal
             </div>
             <h1 className="mt-6 text-4xl font-extrabold leading-tight sm:text-5xl">
               Put your money on a solid path with USAA<span className="text-crimson-500">.</span>
             </h1>
             <p className="mt-6 max-w-xl text-lg text-slate-200">
-              Explore a complete, functional online banking experience — checking,
-              savings, credit, loans, transfers, bill pay, Zelle and more.
+              A complete online banking experience — checking, savings, credit,
+              loans, transfers, bill pay, Zelle and more — built for the armed
+              forces community.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link href="/signup" className="btn-primary text-base">
-                Open demo account
+                Open an account
               </Link>
               <Link href="/login" className="rounded-md bg-white/10 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/20">
                 Sign on →
               </Link>
             </div>
             <p className="mt-6 text-xs text-slate-300">
-              Simulated banking for educational purposes. Not real money.
+              Banking, insurance and investing for the armed forces community.
             </p>
           </div>
           <div className="relative hidden lg:block">
             <div className="rounded-xl bg-white p-6 shadow-2xl">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-usaa-800">Good morning</p>
-                  <p className="text-lg font-bold text-slate-900">Alex R.</p>
-                </div>
-                <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                  Net worth +12.4%
-                </span>
-              </div>
-              <div className="mt-4 flex gap-3">
-                <div className="flex-1 rounded-lg bg-usaa-50 p-4">
-                  <p className="text-xs text-slate-500">Total balance</p>
-                  <p className="text-2xl font-bold text-usaa-800">$94,281.20</p>
-                </div>
-                <div className="flex-1 rounded-lg bg-slate-50 p-4">
-                  <p className="text-xs text-slate-500">Available</p>
-                  <p className="text-2xl font-bold text-slate-900">$86,421.12</p>
+                  <p className="text-sm font-semibold text-usaa-800">
+                    Everything in one place
+                  </p>
                 </div>
               </div>
-              <div className="mt-4 flex gap-2">
-                <span className="flex-1 rounded-md bg-crimson-600 py-2 text-center text-sm font-semibold text-white">Transfer</span>
-                <span className="flex-1 rounded-md bg-crimson-600 py-2 text-center text-sm font-semibold text-white">Pay bills</span>
-              </div>
-              <div className="mt-4 space-y-2 border-t border-slate-100 pt-4">
-                {["Secure Checking · $8,458.05", "Performance First Savings · $24,830.00", "Rewards Visa · $2,859.67 available"].map((r, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
-                    <span className="text-slate-600">{r.split(" · ")[0]}</span>
-                    <span className="font-semibold text-slate-900">{r.split(" · ")[1]}</span>
+              <div className="mt-4 space-y-2">
+                {[
+                  ["Accounts", "Checking, savings, credit and investing at a glance"],
+                  ["Transfers & bill pay", "Move money and pay bills in a few clicks"],
+                  ["Zelle", "Send money to friends and family instantly"],
+                  ["Security", "Two-step verification on every sign-on"],
+                ].map(([t, d]) => (
+                  <div key={t} className="rounded-lg bg-usaa-50 p-4">
+                    <p className="text-sm font-bold text-usaa-900">{t}</p>
+                    <p className="mt-1 text-xs text-slate-500">{d}</p>
                   </div>
                 ))}
               </div>
@@ -97,8 +87,8 @@ export default function LandingPage() {
           One destination for your financial life
         </h2>
         <p className="mx-auto mt-3 max-w-2xl text-center text-slate-600">
-          Everything you need in one place, backed by a desktop-grade online
-          portal and sample data you can reset anytime.
+          Everything you need in one place, backed by a secure, desktop-grade
+          online portal you can use from anywhere.
         </p>
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           {perks.map((p) => (
@@ -120,7 +110,7 @@ export default function LandingPage() {
           <div className="grid gap-8 md:grid-cols-3">
             {[
               { t: "24/7 access", b: "Your accounts, activity and statements whenever you need them." },
-              { t: "Fee-friendly", b: "No monthly maintenance fees. Edge at the counter." },
+              { t: "Fee-friendly", b: "No monthly maintenance fees. Most accounts, no hidden gotchas." },
               { t: "Smarter money moves", b: "Transfers, bill pay and Zelle in just a few clicks." },
             ].map((f) => (
               <div key={f.t} className="rounded-xl border border-usaa-200 bg-white p-6">
@@ -152,10 +142,11 @@ export default function LandingPage() {
       <section className="bg-crimson-600 py-14">
         <div className="mx-auto max-w-7xl px-4 text-center sm:px-6">
           <h2 className="text-3xl font-extrabold text-white">
-            Ready to explore the portal?
+            Ready to manage your money?
           </h2>
           <p className="mt-2 text-red-100">
-            Create your demo account — fully seeded with sample data in seconds.
+            Open an account today — your checking, savings and card accounts
+            are set up in seconds.
           </p>
           <Link href="/signup" className="btn-secondary mt-6 font-semibold">
             Create account

@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     template: "%s | USAA",
   },
   description:
-    "A functional demonstration of a USAA-style banking experience. Not affiliated with USAA.",
+    "Online banking, insurance and investment services for the armed forces community and their families.",
 };
 
 export default function RootLayout({

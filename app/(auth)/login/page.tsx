@@ -3,14 +3,12 @@
 import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { isMockMode } from "@/lib/mock";
 
 function LoginInner() {
   const router = useRouter();
   const params = useSearchParams();
-  const mock = isMockMode();
 
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,34 +20,31 @@ function LoginInner() {
     setLoading(true);
 
     try {
-      if (mock) {
-        const code = String(Math.floor(100000 + Math.random() * 900000));
-        const email = username.includes("@") ? username : `${username}@usaa-demo.com`;
-        sessionStorage.setItem("usaa_2fa", JSON.stringify({ code, email }));
-        router.push("/login/verify");
-        return;
-      }
-
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email: username.includes("@") ? username : `${username}@usaa-demo.com`,
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
         password,
       });
-      if (signInError || !data.user) {
-        setError(signInError?.message ?? "Unable to sign you on.");
+      if (signInError) {
+        setError(signInError.message);
         return;
       }
 
-      const { data: code, error: codeError } = await supabase.rpc("create_demo_code", {
-        p_purpose: "2fa",
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: { shouldCreateUser: false },
       });
-      if (codeError) {
-        setError(codeError.message);
+      if (otpError) {
+        setError(otpError.message);
         return;
       }
 
-      sessionStorage.setItem("usaa_2fa", JSON.stringify({ code, email: data.user.email }));
+      sessionStorage.setItem(
+        "usaa_2fa",
+        JSON.stringify({ email: email.trim(), remember }),
+      );
       router.push("/login/verify");
     } catch {
       setError("Something went wrong. Please try again.");
@@ -67,16 +62,17 @@ function LoginInner() {
 
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <div>
-          <label className="label" htmlFor="username">
-            Username
+          <label className="label" htmlFor="email">
+            Email
           </label>
           <input
-            id="username"
+            id="email"
+            type="email"
             className="input"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter your username or email"
-            autoComplete="username"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            autoComplete="email"
             required
           />
         </div>
@@ -123,11 +119,11 @@ function LoginInner() {
       </form>
 
       <div className="mt-6 border-t border-slate-100 pt-4 text-center text-sm text-slate-600">
-        New to the demo?{" "}
-<Link href="/signup" className="link">
-Create an account
-          </Link>
-        </div>
+        New to USAA?{" "}
+        <Link href="/signup" className="link">
+          Create an account
+        </Link>
+      </div>
 
       {params.get("next") && (
         <div className="mt-4 rounded-md bg-usaa-50 px-3 py-2 text-xs text-usaa-700">

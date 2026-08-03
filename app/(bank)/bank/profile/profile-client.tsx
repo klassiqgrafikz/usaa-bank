@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { PageHeader } from "@/components/banking/page-header";
 import { formatDate } from "@/lib/utils";
 import { getBankApi } from "@/lib/bank";
@@ -13,11 +13,9 @@ const branches = [
 
 export function ProfileClient({
   profile,
-  email,
   onChanged,
 }: {
   profile: Profile | null;
-  email: string;
   onChanged?: () => void;
 }) {
   const [first, setFirst] = useState(profile?.first_name ?? "");
@@ -28,9 +26,18 @@ export function ProfileClient({
   const [state, setState] = useState(profile?.state ?? "");
   const [zip, setZip] = useState(profile?.zip ?? "");
   const [branch, setBranch] = useState(profile?.military_branch ?? "Army");
+  const [email, setEmail] = useState("");
 
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    import("@/lib/supabase/client").then(({ createClient }) => {
+      createClient().auth.getUser().then(({ data }) => {
+        if (data.user?.email) setEmail(data.user.email);
+      });
+    });
+  }, []);
 
   async function save(e: FormEvent) {
     e.preventDefault();
@@ -148,9 +155,9 @@ export function ProfileClient({
           <div className="card p-6">
             <h2 className="font-bold text-usaa-900">About your data</h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-500">
-              All personal information here is stored only in your demo
-              Supabase project and can be reset at any time from the Security
-              page. Nothing is shared or sent anywhere.
+              The information you provide is used to personalize your banking
+              experience and is protected by our security controls. You can
+              update your details here at any time.
             </p>
           </div>
         </div>

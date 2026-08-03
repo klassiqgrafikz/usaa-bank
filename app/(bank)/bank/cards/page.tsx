@@ -2,16 +2,17 @@
 
 import { useBankData } from "@/lib/use-bank-data";
 import { CardsClient } from "./cards-client";
-import { isMockMode } from "@/lib/mock";
 
 export default function CardsPage() {
   const { data, error, reload } = useBankData(async (api) => {
-    const [cards, disputes] = await Promise.all([
+    const [cards, disputes, transactions, accounts] = await Promise.all([
       api.getCards(),
       api.getDisputes(),
+      api.getTransactions(1000),
+      api.getAccounts(),
     ]);
-    return { cards, disputes };
-  }, [isMockMode()]);
+    return { cards, disputes, transactions, accounts };
+  });
 
   if (error) return <p className="text-sm text-red-600">{error}</p>;
   if (!data) {
@@ -19,6 +20,12 @@ export default function CardsPage() {
   }
 
   return (
-    <CardsClient cards={data.cards} disputes={data.disputes} onChanged={reload} />
+    <CardsClient
+      cards={data.cards}
+      disputes={data.disputes}
+      transactions={data.transactions}
+      accounts={data.accounts}
+      onChanged={reload}
+    />
   );
 }

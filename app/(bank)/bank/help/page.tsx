@@ -31,7 +31,7 @@ const topics = [
     items: [
       "Why do I always enter a verification code?",
       "How do I reset my password?",
-      "How do I reset my demo data?",
+      "How do I report a lost or stolen card?",
     ],
   },
 ];
@@ -39,7 +39,7 @@ const topics = [
 export default function BankHelpPage() {
   return (
     <>
-      <PageHeader title="Help center" subtitle="Find quick answers for the demo banking portal." />
+      <PageHeader title="Help center" subtitle="Find quick answers for online banking." />
 
       <div className="grid gap-6 md:grid-cols-2">
         {topics.map((t) => (
@@ -60,14 +60,15 @@ export default function BankHelpPage() {
       <div className="card mt-6 p-6">
         <h2 className="font-bold text-usaa-900">Still need help?</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Contact our simulated support line or browse the general help pages.
+          Browse the public help center for guides and details about your
+          accounts and security.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Link href="/help" className="btn-primary">
             Public help center
           </Link>
           <Link href="/login" className="btn-secondary">
-            Call 800-555-0100
+            Message support
           </Link>
         </div>
       </div>

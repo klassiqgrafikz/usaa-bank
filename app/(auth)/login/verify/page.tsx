@@ -3,40 +3,30 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { isMockMode } from "@/lib/mock";
 
 export default function VerifyPage() {
   const router = useRouter();
-  const mock = isMockMode();
 
   const [code, setCode] = useState("");
-  const [hint, setHint] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [checked, setChecked] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   useEffect(() => {
     const raw = sessionStorage.getItem("usaa_2fa");
-    sessionStorage.removeItem("usaa_2fa");
-    let parsed: { code?: string } | null = null;
+    let parsed: { email?: string } | null = null;
     if (raw) {
       try {
-        parsed = JSON.parse(raw) as { code?: string };
+        parsed = JSON.parse(raw) as { email?: string };
       } catch {
         /* ignore */
       }
     }
-    const stored = parsed?.code;
+    const email = parsed?.email;
 
-    if (mock) {
-      if (!stored) {
-        router.replace("/login");
-        return;
-      }
-      Promise.resolve().then(() => {
-        setHint(stored);
-        setChecked(true);
-      });
+    if (!email) {
+      router.replace("/login");
       return;
     }
 
@@ -47,44 +37,77 @@ export default function VerifyPage() {
           router.replace("/login");
           return;
         }
-        if (stored) setHint(stored);
         setChecked(true);
       });
     });
-  }, [router, mock]);
+  }, [router]);
+
+  async function resendCode() {
+    const raw = sessionStorage.getItem("usaa_2fa");
+    let email: string | undefined;
+    try {
+      email = (JSON.parse(raw ?? "{}") as { email?: string }).email;
+    } catch {
+      /* ignore */
+    }
+    if (!email) return;
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: false },
+    });
+    if (otpError) {
+      setError(otpError.message);
+      return;
+    }
+    setError(null);
+    setResendCooldown(30);
+    const timer = setInterval(() => {
+      setResendCooldown((c) => {
+        if (c <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    if (mock) {
-      if (code.trim() === hint) {
-        const next = window.location.search
-          .replace(/^\?next=/, "")
-          .replace(/&next=.*$/, "");
-        router.push(next?.startsWith("/bank") ? next : "/bank/dashboard");
-        router.refresh();
-        return;
-      }
-      setError("That code didn't match. Please try again.");
+    const raw = sessionStorage.getItem("usaa_2fa");
+    let email: string | undefined;
+    try {
+      email = (JSON.parse(raw ?? "{}") as { email?: string }).email;
+    } catch {
+      /* ignore */
+    }
+    if (!email) {
+      setError("Your sign-on session expired. Please sign on again.");
       setLoading(false);
+      router.replace("/login");
       return;
     }
 
     const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
-    const { data: valid } = await supabase.rpc("verify_demo_code", {
-      p_code: code.trim(),
-      p_purpose: "2fa",
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      email,
+      token: code.trim(),
+      type: "email",
     });
 
-    if (!valid) {
+    if (verifyError) {
       setError("That code didn't match. Please try again.");
       setLoading(false);
       return;
     }
 
+    sessionStorage.removeItem("usaa_2fa");
     const next = window.location.search
       .replace(/^\?next=/, "")
       .replace(/&next=.*$/, "");
@@ -102,16 +125,8 @@ export default function VerifyPage() {
     <>
       <h1 className="text-2xl font-extrabold text-usaa-900">Two-step verification</h1>
       <p className="mt-1 text-sm text-slate-500">
-        Enter the 6-digit code we sent to confirm it&apos;s really you.
+        Enter the 6-digit code we sent by email to confirm it&apos;s really you.
       </p>
-
-      {hint && (
-        <div className="mt-4 rounded-md border border-gold-400/60 bg-gold-400/15 px-3 py-2 text-sm">
-          <span className="font-semibold text-usaa-800">Demo delivery:</span>{" "}
-          no email/SMS provider is attached, so your code is{" "}
-          <span className="font-mono font-bold text-usaa-900">{hint}</span>.
-        </div>
-      )}
 
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <div>
@@ -139,6 +154,17 @@ export default function VerifyPage() {
         <button type="submit" disabled={loading} className="btn-primary w-full">
           {loading ? "Verifying…" : "Verify"}
         </button>
+
+        <button
+          type="button"
+          onClick={resendCode}
+          disabled={resendCooldown > 0 || loading}
+          className="link w-full text-sm"
+        >
+          {resendCooldown > 0
+            ? `Resend code in ${resendCooldown}s`
+            : "Didn't get a code? Resend it"}
+        </button>
       </form>
 
       <div className="mt-6 text-center">
@@ -146,11 +172,9 @@ export default function VerifyPage() {
           href="/login"
           className="link text-sm"
           onClick={() =>
-            isMockMode()
-              ? router.push("/login")
-              : import("@/lib/supabase/client").then(({ createClient }) =>
-                  createClient().auth.signOut(),
-                )
+            import("@/lib/supabase/client").then(({ createClient }) =>
+              createClient().auth.signOut(),
+            )
           }
         >
           Use a different account

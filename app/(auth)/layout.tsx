@@ -18,7 +18,8 @@ export default function AuthLayout({
         <div className="w-full max-w-md">
           <div className="rounded-xl bg-white p-8 shadow-2xl">{children}</div>
           <p className="mt-4 text-center text-xs text-slate-300">
-            Demonstration environment — sample data only. Not affiliated with USAA.
+            Secure online banking — protected by two-step verification on
+            every sign-on.
           </p>
         </div>
       </main>

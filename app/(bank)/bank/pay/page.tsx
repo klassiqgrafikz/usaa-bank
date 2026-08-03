@@ -2,7 +2,6 @@
 
 import { useBankData } from "@/lib/use-bank-data";
 import { PayClient } from "./pay-client";
-import { isMockMode } from "@/lib/mock";
 
 export default function PayPage() {
   const { data, error, reload } = useBankData(async (api) => {
@@ -12,7 +11,7 @@ export default function PayPage() {
       api.getAccounts(),
     ]);
     return { contacts, transfers: transfers.slice(0, 50), accounts };
-  }, [isMockMode()]);
+  });
 
   if (error) return <p className="text-sm text-red-600">{error}</p>;
   if (!data) {

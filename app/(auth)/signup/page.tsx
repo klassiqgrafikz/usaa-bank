@@ -3,7 +3,6 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { isMockMode } from "@/lib/mock";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -22,13 +21,6 @@ export default function SignupPage() {
     setNotice(null);
     setLoading(true);
 
-    if (isMockMode()) {
-      const code = String(Math.floor(100000 + Math.random() * 900000));
-      sessionStorage.setItem("usaa_2fa", JSON.stringify({ code, email }));
-      router.push("/login/verify");
-      return;
-    }
-
     const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
     const { data, error: authError } = await supabase.auth.signUp({
@@ -36,6 +28,7 @@ export default function SignupPage() {
       password,
       options: {
         data: { first_name: firstName, last_name: lastName },
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/bank/dashboard`,
       },
     });
 
@@ -47,22 +40,22 @@ export default function SignupPage() {
 
     if (!data.session) {
       setNotice(
-        "You're all set! Check your inbox to confirm your email address, then sign on.",
+        "You're all set! Check your inbox to confirm your email address, then sign on to set up your account.",
       );
       setLoading(false);
       return;
     }
 
-    await supabase.rpc("seed_demo_data");
+    await supabase.rpc("ensure_member_data");
     router.push("/bank/dashboard");
     router.refresh();
   }
 
   return (
     <>
-      <h1 className="text-2xl font-extrabold text-usaa-900">Create your demo account</h1>
+      <h1 className="text-2xl font-extrabold text-usaa-900">Create your account</h1>
       <p className="mt-1 text-sm text-slate-500">
-        All account data is fictional sample data.
+        Online banking, insurance and investing for the armed forces community.
       </p>
 
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
@@ -125,6 +118,12 @@ export default function SignupPage() {
             required
           />
         </div>
+
+        <p className="text-xs text-slate-400">
+          By creating an account you agree to the terms of use and privacy
+          notice. Member and account data you create here belongs to your own
+          account.
+        </p>
 
         {error && (
           <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">

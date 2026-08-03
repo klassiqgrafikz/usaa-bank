@@ -39,8 +39,8 @@ export default function BankingPage() {
         </div>
       </section>
       <CtaBand
-        title="Move to a demo account with everything set up"
-        body="Your portal arrives pre-loaded with accounts, transactions, payees and contacts."
+        title="Open an account with everything set up"
+        body="Your portal comes ready with checking, savings and card accounts, plus tools to automate the rest."
       />
     </div>
   );

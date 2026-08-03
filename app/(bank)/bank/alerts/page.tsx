@@ -2,7 +2,6 @@
 
 import { useBankData } from "@/lib/use-bank-data";
 import { AlertsClient } from "./alerts-client";
-import { isMockMode } from "@/lib/mock";
 
 export default function AlertsPage() {
   const { data, error, reload } = useBankData(async (api) => {
@@ -11,7 +10,7 @@ export default function AlertsPage() {
       api.getAlertPrefs(),
     ]);
     return { alerts, prefs };
-  }, [isMockMode()]);
+  });
 
   if (error) return <p className="text-sm text-red-600">{error}</p>;
   if (!data) {

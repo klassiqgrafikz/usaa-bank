@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { isMockMode } from "@/lib/mock";
 import { createClient } from "@/lib/supabase/client";
 
 export function EnsureData() {
@@ -13,7 +12,6 @@ export function EnsureData() {
 
   useEffect(() => {
     if (ran.current) return;
-    if (isMockMode()) return;
     ran.current = true;
 
     (async () => {
@@ -24,13 +22,13 @@ export function EnsureData() {
           .limit(1);
         if (accounts && accounts.length > 0) return;
 
-        setStatus("Setting up your sample data…");
-        const { error } = await supabase.rpc("seed_demo_data");
+        setStatus("Setting up your accounts…");
+        const { error } = await supabase.rpc("ensure_member_data");
         if (!error) {
           router.refresh();
         } else {
           setStatus(null);
-          console.error("seed_demo_data failed:", error.message);
+          console.error("ensure_member_data failed:", error.message);
         }
       } catch (err) {
         console.error("EnsureData:", err);

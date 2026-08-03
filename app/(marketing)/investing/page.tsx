@@ -21,7 +21,7 @@ export default function InvestingPage() {
         eyebrow="Investing & Retirement"
         title="Invest for the life you want next"
         subtitle="Retirement funds, brokerage accounts and a net worth view that keeps you on path."
-        cta="View demo portfolio"
+        cta="View a portfolio"
       />
       <FeatureGrid features={features} />
       <CtaBand

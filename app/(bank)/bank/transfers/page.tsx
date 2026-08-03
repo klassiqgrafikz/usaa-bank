@@ -2,7 +2,6 @@
 
 import { useBankData } from "@/lib/use-bank-data";
 import { TransfersClient } from "./transfers-client";
-import { isMockMode } from "@/lib/mock";
 
 export default function TransfersPage() {
   const { data, error, reload } = useBankData(async (api) => {
@@ -11,7 +10,7 @@ export default function TransfersPage() {
       api.getTransfers(),
     ]);
     return { accounts, transfers: transfers.slice(0, 50) };
-  }, [isMockMode()]);
+  });
 
   if (error) return <p className="text-sm text-red-600">{error}</p>;
   if (!data) {

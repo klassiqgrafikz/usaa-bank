@@ -1,39 +1,38 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function ForgotPasswordPage() {
-  const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setNotice(null);
     setLoading(true);
 
     try {
-      const res = await fetch("/api/reset/request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = (await res.json()) as { ok: boolean; code?: string; error?: string };
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        email.trim(),
+        {
+          redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+        },
+      );
 
-      if (!res.ok || !data.ok) {
-        setError(data.error ?? "Something went wrong.");
+      if (resetError) {
+        setError(resetError.message);
         return;
       }
 
-      sessionStorage.setItem(
-        "usaa_reset",
-        JSON.stringify({ email, code: data.code }),
+      setNotice(
+        "If that email is registered, we've sent you a link to choose a new password. Check your inbox.",
       );
-      router.push("/reset-password");
     } catch {
       setError("Unable to reach the server. Try again.");
     } finally {
@@ -45,8 +44,8 @@ export default function ForgotPasswordPage() {
     <>
       <h1 className="text-2xl font-extrabold text-usaa-900">Reset your password</h1>
       <p className="mt-1 text-sm text-slate-500">
-        Enter the email on your demo account and we&apos;ll help you choose a new
-        password.
+        Enter the email on your account and we&apos;ll send you a secure link to
+        choose a new password.
       </p>
 
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
@@ -68,6 +67,11 @@ export default function ForgotPasswordPage() {
         {error && (
           <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}
+          </div>
+        )}
+        {notice && (
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            {notice}
           </div>
         )}
 

@@ -1,18 +1,31 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
 
-  const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    import("@/lib/supabase/client").then(({ createClient }) => {
+      const supabase = createClient();
+      supabase.auth.getSession().then(({ data }) => {
+        if (!data.session) {
+          router.replace("/forgot-password");
+          return;
+        }
+        setReady(true);
+      });
+    });
+  }, [router]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -23,29 +36,22 @@ export default function ResetPasswordPage() {
       setError("Passwords don't match.");
       return;
     }
-
-    const raw = sessionStorage.getItem("usaa_reset");
-    if (!raw) {
-      setError("Session expired. Please request a new code.");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
       return;
     }
-    const { email } = JSON.parse(raw) as { email: string };
 
     setLoading(true);
     try {
-      const res = await fetch("/api/reset/complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code: code.trim(), newPassword: password }),
-      });
-      const data = (await res.json()) as { ok: boolean; error?: string };
-
-      if (!res.ok || !data.ok) {
-        setError(data.error ?? "Something went wrong.");
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) {
+        setError(updateError.message);
         return;
       }
 
-      sessionStorage.removeItem("usaa_reset");
+      await supabase.auth.signOut();
       setNotice("Password updated! Redirecting to sign on…");
       setTimeout(() => router.push("/login"), 1200);
     } catch {
@@ -55,30 +61,20 @@ export default function ResetPasswordPage() {
     }
   }
 
+  if (!ready) {
+    return (
+      <div className="text-sm text-slate-500">Loading…</div>
+    );
+  }
+
   return (
     <>
       <h1 className="text-2xl font-extrabold text-usaa-900">Choose a new password</h1>
       <p className="mt-1 text-sm text-slate-500">
-        Enter the 6-digit code shown on the previous step, then set a new
-        password.
+        Set a new password for your account.
       </p>
 
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
-        <div>
-          <label className="label" htmlFor="code">
-            Reset code
-          </label>
-          <input
-            id="code"
-            inputMode="numeric"
-            className="input text-center font-mono text-lg tracking-[0.4em]"
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            placeholder="••••••"
-            required
-          />
-        </div>
-
         <div>
           <label className="label" htmlFor="password">
             New password
@@ -90,6 +86,7 @@ export default function ResetPasswordPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             minLength={8}
+            autoComplete="new-password"
             required
           />
         </div>
@@ -105,6 +102,7 @@ export default function ResetPasswordPage() {
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             minLength={8}
+            autoComplete="new-password"
             required
           />
         </div>

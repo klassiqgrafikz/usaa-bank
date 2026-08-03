@@ -17,12 +17,9 @@ import {
   UserRound,
   LifeBuoy,
   LogOut,
-  RefreshCw,
   Search,
 } from "lucide-react";
 import { initials } from "@/lib/utils";
-import { isMockMode } from "@/lib/mock";
-import { getBankApi } from "@/lib/bank";
 import type { Profile } from "@/lib/types";
 
 const nav = [
@@ -75,11 +72,6 @@ export function BankShell({
   const router = useRouter();
 
   async function signOut() {
-    if (isMockMode()) {
-      router.push("/login");
-      router.refresh();
-      return;
-    }
     const supabase = (await import("@/lib/supabase/client")).createClient();
     await supabase.auth.signOut();
     router.push("/login");
@@ -90,12 +82,11 @@ export function BankShell({
     <div className="flex min-h-screen bg-slate-50">
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col bg-usaa-900 lg:flex">
         <div className="flex h-16 items-center gap-2 border-b border-white/10 px-5">
-          <span className="text-xl font-extrabold text-white">
-            USAA<span className="text-crimson-500">.</span>
-          </span>
-          <span className="ml-auto rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-gold-400">
-            DEMO
-          </span>
+          <Link href="/bank/dashboard">
+            <span className="text-xl font-extrabold text-white">
+              USAA<span className="text-crimson-500">.</span>
+            </span>
+          </Link>
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
           <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
@@ -124,23 +115,6 @@ export function BankShell({
           ))}
         </nav>
         <div className="border-t border-white/10 p-4">
-          <button
-            onClick={() => {
-              const ok = window.confirm(
-                "Reset all of your demo data back to the sample starting point?",
-              );
-              if (ok) {
-                void getBankApi().then(async (api) => {
-                  await api.resetDemo();
-                  router.refresh();
-                });
-              }
-            }}
-            className="mb-3 flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-white/10"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Reset demo data
-          </button>
           <button
             onClick={signOut}
             className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-white/10"
@@ -188,7 +162,8 @@ export function BankShell({
         <main className="flex-1 px-4 py-6 sm:px-6">{children}</main>
 
         <footer className="border-t border-slate-200 px-6 py-4 text-xs text-slate-500">
-          Demonstration environment. Sample data only — not affiliated with USAA.
+          © {new Date().getFullYear()} USAA Federal Savings Bank. All rights
+          reserved.
         </footer>
       </div>
     </div>

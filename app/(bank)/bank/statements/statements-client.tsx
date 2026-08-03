@@ -74,7 +74,7 @@ export function StatementsClient({
 
   function download(stmt: Statement) {
     const rows = [
-      ["USAA-style Demo Bank — Statement"],
+      ["USAA Bank — Account Statement"],
       ["Account", stmt.accountName],
       ["Period", stmt.month],
       [],

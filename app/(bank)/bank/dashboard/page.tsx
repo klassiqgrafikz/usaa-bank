@@ -49,7 +49,7 @@ export default function DashboardPage() {
     accountName: accountName.get(tx.account_id) ?? "Account",
   }));
 
-  const chartData = buildChartData(accounts);
+  const chartData = buildChartData(accounts, transactions);
 
   const totalAvailable = accounts.reduce(
     (sum, a) =>
@@ -202,25 +202,38 @@ export default function DashboardPage() {
   );
 }
 
-function buildChartData(accounts: Account[]) {
+function buildChartData(accounts: Account[], transactions: Transaction[]) {
   const checking = accounts.find((a) => a.type === "checking");
+  const now = new Date();
+
   if (!checking) {
     return Array.from({ length: 6 }, (_, i) => ({
-      label: new Date(new Date().setMonth(new Date().getMonth() - (5 - i))).toLocaleString("en-US", { month: "short" }),
+      label: new Date(now.getFullYear(), now.getMonth() - (5 - i), 1).toLocaleString("en-US", { month: "short" }),
       amount: 0,
     }));
   }
 
-  const months: { label: string; amount: number }[] = [];
-  const now = new Date();
-  const running = checking.balance_cents;
+  // Monthly net change per account, oldest month first.
+  const monthly: number[] = Array(6).fill(0);
+  for (const tx of transactions) {
+    if (tx.account_id !== checking.id) continue;
+    const d = new Date(tx.posted_at);
+    const monthsAgo = (now.getFullYear() - d.getFullYear()) * 12 + now.getMonth() - d.getMonth();
+    if (monthsAgo >= 0 && monthsAgo < 6) {
+      monthly[5 - monthsAgo] += tx.amount_cents;
+    }
+  }
 
+  // Walk backwards from the current balance so the last point is exact.
+  let running = checking.balance_cents;
+  const points: { label: string; amount: number }[] = [];
   for (let i = 5; i >= 0; i--) {
     const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push({
+    points.unshift({
       label: monthStart.toLocaleString("en-US", { month: "short" }),
-      amount: running - i * 4200, // gentle downward walk for a believable line
+      amount: running,
     });
+    running -= monthly[i];
   }
-  return months;
+  return points;
 }

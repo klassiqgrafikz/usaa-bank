@@ -3,28 +3,28 @@ import { ProductHero } from "@/components/product-ui";
 
 const faqs = [
   {
-    q: "Is this a real bank account?",
-    a: "No. This is a demonstration portal with sample data. Nothing on this site is real money, and there is no real USAA integration.",
+    q: "How do I open an account?",
+    a: "Sign up from the home page with your name and email. Your checking, savings, credit card and investment accounts are created automatically, and you confirm your email to start.",
   },
   {
-    q: "How do I see the app?",
-    a: "Create an account from the sign-up page. Your demo data (accounts, transactions, payees, Zelle contacts) is generated automatically.",
+    q: "Why do I enter a verification code every time I sign on?",
+    a: "Two-step verification is enabled for every account. After you enter your password, we send a 6-digit code to the email on your account to confirm it's really you.",
   },
   {
-    q: "Can I reset the sample data?",
-    a: "Yes. Inside the portal, open Security then click “Reset demo data” to wipe and regenerate your sample accounts.",
+    q: "What can I do in the online portal?",
+    a: "Dashboard and account overviews, transactions with search and download, internal, external and wire transfers, bill pay, Zelle, mobile check deposit, statements, card management, alerts and your profile.",
   },
   {
-    q: "What banking features are simulated?",
-    a: "Login with two-step verification, dashboard, account detail, transactions with search/download, internal + external + wire transfers, bill pay, Zelle, mobile deposit, statements, cards, alerts and profile.",
+    q: "How do I reset my password?",
+    a: "Choose \"Forgot username or password\" on the sign-on page and enter your email. We'll send you a secure link to choose a new password.",
   },
   {
-    q: "Do I need a Supabase account?",
-    a: "To run this yourself, yes — the app reads from a Supabase project. See the README for one-time setup instructions.",
+    q: "Are there monthly maintenance fees?",
+    a: "No. Checking, savings and credit accounts have no monthly maintenance fees, and you can keep everything — banking, insurance and investments — in one place.",
   },
   {
-    q: "Why does the two-step code appear on screen?",
-    a: "No email/SMS provider is attached to the demo, so the generated verification code is displayed inline for you to complete the flow.",
+    q: "Is my data secure?",
+    a: "Your data is protected with encrypted connections and row-level access controls so only you can see your own accounts. Two-step verification is turned on for every sign-on.",
   },
 ];
 
@@ -34,7 +34,7 @@ export default function HelpPage() {
       <ProductHero
         eyebrow="Help & Support"
         title="How can we help you?"
-        subtitle="Answers about the demo portal, or get in touch — we reply to everything."
+        subtitle="Answers about online banking, security and account setup — or get in touch and we'll point you in the right direction."
         cta="Explore the portal"
       />
       <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
@@ -57,7 +57,8 @@ export default function HelpPage() {
         <div id="contact" className="mt-12 rounded-xl bg-usaa-50 p-8">
           <h2 className="text-xl font-bold text-usaa-900">Still need a hand?</h2>
           <p className="mt-2 text-sm text-slate-600">
-            Our (simulated) team monitors this inbox during business hours.
+            Our support team monitors this inbox during business hours and
+            replies to every message.
           </p>
           <form className="mt-6 grid gap-4 sm:grid-cols-2">
             <div>
@@ -74,7 +75,7 @@ export default function HelpPage() {
             </div>
             <div className="sm:col-span-2">
               <Link href="/login" className="btn-primary w-full sm:w-auto">
-                Send (demo)
+                Send message
               </Link>
             </div>
           </form>

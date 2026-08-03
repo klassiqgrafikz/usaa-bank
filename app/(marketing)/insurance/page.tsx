@@ -21,11 +21,11 @@ export default function InsurancePage() {
         eyebrow="Insurance"
         title="Insurance that follows you from base to deployment"
         subtitle="From your first year of service onward, find coverage rates that move with your needs."
-        cta="Get a demo quote"
+        cta="Get a quote"
       />
       <FeatureGrid features={features} />
       <CtaBand
-        title="Explore the demo insurance experience"
+        title="Explore the insurance experience"
         body="Track auto, home and life coverage inside the banking portal."
       />
     </div>

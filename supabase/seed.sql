@@ -1,161 +1,65 @@
 -- =====================================================================
--- USAA-style online banking demo
--- Functions & demo seed
+-- USAA-style online banking portal
+-- Functions
 -- Run this in the Supabase SQL editor AFTER schema.sql.
 -- =====================================================================
 
--- ---------------------------------------------------------------------
--- Demo second-step codes (2FA / password reset)
--- ---------------------------------------------------------------------
-create or replace function public.create_demo_code(p_purpose text default '2fa')
-returns text
-language plpgsql
-security definer set search_path = public
-as $$
-declare v_code text;
-begin
-  v_code := lpad(floor(random() * 1000000)::text, 6, '0');
-  insert into public.login_codes (user_id, code, purpose, expires_at)
-  values (auth.uid(), v_code, p_purpose, now() + interval '15 minutes');
-  return v_code;
-end;
-$$;
-
-create or replace function public.verify_demo_code(p_code text, p_purpose text default '2fa')
-returns boolean
-language plpgsql
-security definer set search_path = public
-as $$
-declare v_ok boolean;
-begin
-  update public.login_codes
-     set used = true
-   where user_id = auth.uid()
-     and code = p_code
-     and purpose = p_purpose
-     and used = false
-     and expires_at > now()
-  returning true into v_ok;
-  return coalesce(v_ok, false);
-end;
-$$;
-
 -- -------------------------------------------------------------------------
--- Seed demo accounts, cards, transactions & co.
+-- Provision a new member's account shells (all at $0 — no sample data)
 -- -------------------------------------------------------------------------
-create or replace function public.seed_demo_data()
+create or replace function public.ensure_member_data()
 returns void
 language plpgsql
 security definer set search_path = public
 as $$
 declare
   u uuid := auth.uid();
-  ch uuid; sv uuid; cc uuid; ln uuid; iv uuid;
+  ch uuid; sv uuid; cc uuid; iv uuid;
+  gen text;
 begin
   if u is null then
     raise exception 'not authenticated';
   end if;
 
+  if exists (select 1 from public.accounts where user_id = u limit 1) then
+    return;
+  end if;
+
+  -- Real, unique account numbers for this member.
+  gen := replace(gen_random_uuid()::text, '-', '');
+
   insert into public.accounts
     (user_id, name, type, account_number, routing_number,
      balance_cents, available_cents, credit_limit_cents, apr, apy, opened_at)
   values
-    (u, 'Secure Checking', 'checking', '4582 1902 7710 3361', '314074269',
-     845805, 845805, null, null, 0.10, current_date - interval '3 years'),
-    (u, 'Performance First Savings', 'savings', '4582 7711 0022 9084', '314074269',
-     2483000, 2483000, null, null, 4.35, current_date - interval '6 years'),
-    (u, 'USAA Rewards Visa Platinum', 'credit_card', '4797 8813 2244 9056', '314074269',
-     214033, 285967, 500000, 24.99, null, current_date - interval '10 years'),
-    (u, 'Auto Loan', 'loan', '4582 5511 7022 1044', '314074269',
-     1245000, null, null, 6.24, null, current_date - interval '2 years'),
-    (u, 'USAA Retirement Fund', 'investment', '4582 1132 8902 4455', '314074269',
-     6728000, null, null, null, null, current_date - interval '8 years');
+    (u, 'Secure Checking', 'checking',
+     format('%s %s %s %s', substr(gen, 1, 4), substr(gen, 5, 4), substr(gen, 9, 4), substr(gen, 13, 4)),
+     '314074269', 0, 0, null, null, 0.10, current_date),
+    (u, 'Performance First Savings', 'savings',
+     format('%s %s %s %s', substr(gen, 17, 4), substr(gen, 21, 4), substr(gen, 25, 4), substr(gen, 29, 4)),
+     '314074269', 0, 0, null, null, 4.35, current_date),
+    (u, 'USAA Rewards Visa Platinum', 'credit_card',
+     format('%s %s %s %s', substr(gen, 2, 4), substr(gen, 6, 4), substr(gen, 10, 4), substr(gen, 14, 4)),
+     '314074269', 0, 0, 500000, 24.99, null, current_date),
+    (u, 'USAA Retirement Fund', 'investment',
+     format('%s %s %s %s', substr(gen, 3, 4), substr(gen, 7, 4), substr(gen, 11, 4), substr(gen, 15, 4)),
+     '314074269', 0, 0, null, null, null, current_date);
 
   select id into ch from public.accounts where user_id = u and type = 'checking';
-  select id into sp from public.accounts where user_id = u and type = 'savings';
+  select id into sv from public.accounts where user_id = u and type = 'savings';
   select id into cc from public.accounts where user_id = u and type = 'credit_card';
-  select id into ln from public.accounts where user_id = u and type = 'loan';
   select id into iv from public.accounts where user_id = u and type = 'investment';
 
-  insert into public.payees (user_id, name, category, account_last4, routing_last4, phone, address) values
-    (u, 'City Power & Electric', 'Utilities', '8812', '0283', '800-555-0142', 'PO Box 5123, San Antonio, TX'),
-    (u, 'Verizon Wireless', 'Telephone', '3310', '1840', '800-555-0177', 'PO Box 9000, Dallas, TX'),
-    (u, 'Sunstate Insurance Co.', 'Insurance', '7745', '3290', '800-555-0104', '1400 Market St, San Francisco, CA'),
-    (u, 'Homeowners Association', 'Housing', '2021', '5510', '800-555-0128', '500 Oak Creek Rd, Austin, TX');
-
-  insert into public.bill_payments (user_id, payee_id, from_account_id, amount_cents, schedule, frequency, next_run, status) values
-    (u, (select id from public.payees where user_id = u and name = 'Verizon Wireless'), ch, 8900, 'recurring', 'monthly', current_date + interval '8 days', 'scheduled'),
-    (u, (select id from public.payees where user_id = u and name = 'City Power & Electric'), ch, 13450, 'one_time', null, null, 'completed'),
-    (u, (select id from public.payees where user_id = u and name = 'Sunstate Insurance Co.'), ch, 15700, 'recurring', 'monthly', current_date + interval '20 days', 'scheduled');
-
-  insert into public.zelle_contacts (user_id, name, email_or_phone, bank) values
-    (u, 'Alex Morgan', 'alex.morgan@example.com', 'Chase'),
-    (u, 'Priya Patel', '512-555-0143', 'Bank of America'),
-    (u, 'Marcus Reed', 'marcus.reed@example.com', 'Wells Fargo');
-
-  insert into public.zelle_transfers (user_id, direction, contact_id, amount_cents, status, note, created_at) values
-    (u, 'sent', (select id from public.zelle_contacts where user_id = u and name = 'Alex Morgan'), 25000, 'completed', 'Dinner & movie', now() - interval '2 days'),
-    (u, 'received', (select id from public.zelle_contacts where user_id = u and name = 'Priya Patel'), 18000, 'completed', 'Split utilities', now() - interval '5 days'),
-    (u, 'sent', (select id from public.zelle_contacts where user_id = u and name = 'Marcus Reed'), 4000, 'completed', 'Coffee', now() - interval '9 days');
-
-  insert into public.transactions (account_id, user_id, description, merchant, category, amount_cents, status, posted_at, reference) values
-    (ln, u, 'Monthly vehicle payment', 'USAA Auto Loan', 'Loan', -145000, 'posted', now() - interval '11 days', 'LOAN-2571'),
-    (cc, u, 'Whole Foods Market', 'Whole Foods', 'Groceries', -6200, 'posted', now() - interval '1 day', 'CC-8813'),
-    (cc, u, 'Costco Wholesale', 'Costco', 'Groceries', -14020, 'posted', now() - interval '2 days', 'CC-8814'),
-    (cc, u, 'Shell Gas Station', 'Shell', 'Fuel', -3900, 'posted', now() - interval '3 days', 'CC-8815'),
-    (cc, u, 'Netflix', 'Netflix', 'Entertainment', -1599, 'posted', now() - interval '4 days', 'CC-8816'),
-    (cc, u, 'Amazon', 'Amazon', 'Shopping', -8940, 'posted', now() - interval '5 days', 'CC-8817'),
-    (cc, u, 'Delta Air Lines', 'Delta', 'Travel', -41500, 'posted', now() - interval '8 days', 'CC-8818'),
-    (cc, u, 'Preferred Rewards cashback', 'USAA', 'Rewards', 12500, 'posted', now() - interval '10 days', 'CC-8819'),
-    (cc, u, 'CVS Pharmacy', 'CVS', 'Health', -2380, 'posted', now() - interval '12 days', 'CC-8820'),
-    (ch, u, 'Automated Payroll Deposit', 'Microsoft', 'Income', 642000, 'posted', now() - interval '14 days', 'DD-USAA'),
-    (ch, u, 'Transfer from Savings', 'USAA Transfer', 'Transfer', 100000, 'posted', now() - interval '14 days', 'TR-1022'),
-    (ch, u, 'United Airlines', 'United', 'Travel', -28750, 'pending', now() - interval '6 hours', 'SP-8821'),
-    (ch, u, 'Taco Bell', 'Taco Bell', 'Dining', -1250, 'posted', now(), 'SP-8822');
-
-  insert into public.investment_holdings (account_id, user_id, symbol, name, shares, avg_cost_cents, current_price_cents) values
-    (iv, u, 'VTSAX', 'Vanguard Total Stock Market Index', 120.5000, 10149, 10420),
-    (iv, u, 'VXUS', 'Vanguard Total International Stock', 220.1000, 4120, 4155),
-    (iv, u, 'BND', 'Vanguard Total Bond Market', 150.0000, 7400, 7550);
-
   insert into public.cards (user_id, account_id, card_last4, brand, card_type, status, expires) values
-    (u, ch, '7931', 'Visa', 'debit', 'active', '07/29'),
-    (u, cc, '2210', 'Visa', 'credit', 'active', '09/30');
+    (u, ch, right(gen, 4), 'Visa', 'debit', 'active',
+     to_char(current_date + interval '4 years', 'MM/YY')),
+    (u, cc, substr(gen, 4, 4), 'Visa', 'credit', 'active',
+     to_char(current_date + interval '4 years', 'MM/YY'));
 
-  insert into public.alert_preferences (user_id) values (u);
-  insert into public.alerts (user_id, title, message, severity, read, created_at) values
-    (u, 'Direct deposit received', 'Your payroll deposit of $6,420.00 posted to Secure Checking', 'success', true, now() - interval '1 day'),
-    (u, 'Low balance alert', 'Secure Checking dropped below your $500.00 threshold.', 'warning', false, now() - interval '3 days'),
-    (u, 'Welcome to your demo account', 'You are in a demonstration environment. Account data is sample data.', 'info', false, now());
+  insert into public.alert_preferences (user_id) values (u)
+    on conflict (user_id) do nothing;
 
   return;
-end;
-$$;
-
--- -------------------------------------------------------------------------
--- Reset all demo data for the current user
--- -------------------------------------------------------------------------
-create or replace function public.reset_demo_data()
-returns void
-language plpgsql
-security definer set search_path = public
-as $$
-declare u uuid := auth.uid();
-begin
-  if u is null then raise exception 'not authenticated'; end if;
-  delete from public.accounts where user_id = u;
-  delete from public.payees where user_id = u;
-  delete from public.zelle_contacts where user_id = u;
-  delete from public.transfers where user_id = u;
-  delete from public.bill_payments where user_id = u;
-  delete from public.zelle_transfers where user_id = u;
-  delete from public.transactions where user_id = u;
-  delete from public.cards where user_id = u;
-  delete from public.investment_holdings where user_id = u;
-  delete from public.alerts where user_id = u;
-  delete from public.disputes where user_id = u;
-  delete from public.alert_preferences where user_id = u;
-  perform public.seed_demo_data();
 end;
 $$;
 
@@ -346,12 +250,18 @@ end;
 $$;
 
 -- -------------------------------------------------------------------------
+-- Cleanup of the previous demo-only plumbing
+-- -------------------------------------------------------------------------
+drop function if exists public.seed_demo_data();
+drop function if exists public.reset_demo_data();
+drop function if exists public.create_demo_code(text);
+drop function if exists public.verify_demo_code(text, text);
+drop table if exists public.login_codes;
+
+-- -------------------------------------------------------------------------
 -- Grants
 -- -------------------------------------------------------------------------
-grant execute on function public.create_demo_code(text) to anon, authenticated;
-grant execute on function public.verify_demo_code(text, text) to anon, authenticated;
-grant execute on function public.seed_demo_data() to anon, authenticated;
-grant execute on function public.reset_demo_data() to anon, authenticated;
+grant execute on function public.ensure_member_data() to anon, authenticated;
 grant execute on function public.make_internal_transfer(uuid, uuid, bigint, text, text, timestamptz, text) to anon, authenticated;
 grant execute on function public.make_external_transfer(uuid, text, bigint, text, text, text, timestamptz, text) to anon, authenticated;
 grant execute on function public.make_bill_payment(uuid, uuid, bigint, text, text, timestamptz) to anon, authenticated;

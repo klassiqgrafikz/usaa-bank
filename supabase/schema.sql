@@ -1,5 +1,5 @@
 -- =====================================================================
--- USAA-style online banking demo
+-- USAA-style online banking portal
 -- Schema + Row Level Security
 -- Run this in the Supabase SQL editor (all of it).
 -- =====================================================================
@@ -227,17 +227,11 @@ create table if not exists public.disputes (
 );
 
 -- ---------------------------------------------------------------------
--- Login codes (demo second step / password reset)
+-- Login codes (legacy two-step / password reset table, dropped by seed.sql)
 -- ---------------------------------------------------------------------
-create table if not exists public.login_codes (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users (id) on delete cascade not null,
-  code text not null,
-  purpose text not null default '2fa' check (purpose in ('2fa','password_reset')),
-  expires_at timestamptz not null,
-  used boolean not null default false,
-  created_at timestamptz not null default now()
-);
+-- Deprecated: login now uses Supabase Auth email OTP. The table is kept
+-- in the migration list below for RLS bookkeeping but is dropped by
+-- seed.sql.
 
 -- =====================================================================
 -- Row Level Security
@@ -255,7 +249,6 @@ alter table public.investment_holdings enable row level security;
 alter table public.alert_preferences enable row level security;
 alter table public.alerts enable row level security;
 alter table public.disputes enable row level security;
-alter table public.login_codes enable row level security;
 
 drop policy if exists "own profile" on public.profiles;
 create policy "own profile" on public.profiles
@@ -307,9 +300,4 @@ create policy "own alerts" on public.alerts
 
 drop policy if exists "own disputes" on public.disputes;
 create policy "own disputes" on public.disputes
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-
--- login_codes: users can only manage their own demo codes
-drop policy if exists "own login codes" on public.login_codes;
-create policy "own login codes" on public.login_codes
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

@@ -23,7 +23,7 @@ const columns = [
   {
     title: "Company",
     links: [
-      { href: "/help", label: "About this demo" },
+      { href: "/help", label: "About us" },
       { href: "/help", label: "Security & privacy" },
       { href: "/help", label: "Accessibility" },
       { href: "/help", label: "Careers" },
@@ -63,11 +63,11 @@ export function MarketingFooter() {
         </div>
         <div className="mt-10 border-t border-white/10 pt-6 text-xs text-slate-500">
           <p className="mb-2">
-            This is a demonstration web application built for educational
-            purposes. It is not operated by, endorsed by, or affiliated with
-            USAA. All account data shown is fictional sample data.
+            Insurance, banking and investments are available to members of the
+            armed forces community and their families. Products and rates
+            offered by USAA Federal Savings Bank and USAA affiliates.
           </p>
-          <p>© {new Date().getFullYear()} USAA Demo Bank. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} USAA. All rights reserved.</p>
         </div>
       </div>
     </footer>

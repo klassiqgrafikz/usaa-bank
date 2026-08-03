@@ -5,15 +5,19 @@ import { CreditCard, Lock, LockOpen, ShieldAlert } from "lucide-react";
 import { PageHeader } from "@/components/banking/page-header";
 import { cn } from "@/lib/utils";
 import { getBankApi } from "@/lib/bank";
-import type { Card, Dispute } from "@/lib/types";
+import type { Account, Card, Dispute, Transaction } from "@/lib/types";
 
 export function CardsClient({
   cards,
   disputes,
+  transactions,
+  accounts,
   onChanged,
 }: {
   cards: Card[];
   disputes: Dispute[];
+  transactions: Transaction[];
+  accounts: Account[];
   onChanged?: () => void;
 }) {
   const [busy, setBusy] = useState<string | null>(null);
@@ -156,21 +160,7 @@ export function CardsClient({
         </div>
 
         <div className="space-y-4">
-          <div className="card p-6">
-            <h2 className="font-bold text-usaa-900">Rewards summary</h2>
-            <div className="mt-4 flex items-end justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Points earned</p>
-                <p className="text-3xl font-extrabold text-usaa-900">12,480</p>
-              </div>
-              <span className="rounded-full bg-gold-400/20 px-3 py-1 text-sm font-semibold text-amber-700">
-                ≈ $124.80
-              </span>
-            </div>
-            <p className="mt-4 text-xs text-slate-400">
-              Points never expire on the Rewards Visa in this demo.
-            </p>
-          </div>
+          <RewardsSummary transactions={transactions} accounts={accounts} />
 
           <div className="card overflow-hidden">
             <div className="border-b border-slate-100 px-6 py-4">
@@ -200,5 +190,46 @@ export function CardsClient({
         </div>
       </div>
     </>
+  );
+}
+
+function RewardsSummary({
+  transactions,
+  accounts,
+}: {
+  transactions: Transaction[];
+  accounts: Account[];
+}) {
+  const creditAccountIds = new Set(
+    accounts.filter((a) => a.type === "credit_card").map((a) => a.id),
+  );
+  const postedSpend = transactions
+    .filter(
+      (t) =>
+        t.amount_cents < 0 &&
+        t.status === "posted" &&
+        creditAccountIds.has(t.account_id),
+    )
+    .reduce((sum, t) => sum + Math.abs(t.amount_cents), 0);
+  const points = Math.floor(postedSpend / 100);
+
+  return (
+    <div className="card p-6">
+      <h2 className="font-bold text-usaa-900">Rewards summary</h2>
+      <div className="mt-4 flex items-end justify-between">
+        <div>
+          <p className="text-sm text-slate-500">Points earned</p>
+          <p className="text-3xl font-extrabold text-usaa-900">
+            {points.toLocaleString("en-US")}
+          </p>
+        </div>
+        <span className="rounded-full bg-gold-400/20 px-3 py-1 text-sm font-semibold text-amber-700">
+          ≈ ${(points / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </span>
+      </div>
+      <p className="mt-4 text-xs text-slate-400">
+        Earn 1 point per $1 of posted card purchases. Points never expire.
+      </p>
+    </div>
   );
 }

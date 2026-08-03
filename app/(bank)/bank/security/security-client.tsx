@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { KeyRound, Monitor, RefreshCw, ShieldCheck } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { KeyRound, Monitor, ShieldCheck } from "lucide-react";
 import { PageHeader } from "@/components/banking/page-header";
-import { getBankApi } from "@/lib/bank";
-import { isMockMode } from "@/lib/mock";
 
-export function SecurityClient({ email }: { email: string }) {
+export function SecurityClient() {
+  const [email, setEmail] = useState("");
 
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -14,7 +13,14 @@ export function SecurityClient({ email }: { email: string }) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [resetting, setResetting] = useState(false);
+
+  useEffect(() => {
+    import("@/lib/supabase/client").then(({ createClient }) => {
+      createClient().auth.getUser().then(({ data }) => {
+        if (data.user?.email) setEmail(data.user.email);
+      });
+    });
+  }, []);
 
   async function changePassword(e: FormEvent) {
     e.preventDefault();
@@ -25,14 +31,6 @@ export function SecurityClient({ email }: { email: string }) {
       return;
     }
     setLoading(true);
-    if (isMockMode()) {
-      setSuccess("Password updated successfully.");
-      setLoading(false);
-      setCurrent("");
-      setNext("");
-      setConfirm("");
-      return;
-    }
     const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
     const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -56,19 +54,11 @@ export function SecurityClient({ email }: { email: string }) {
     setConfirm("");
   }
 
-  async function resetData() {
-    if (!window.confirm("Reset all demo data to the sample starting point?")) return;
-    setResetting(true);
-    const api = await getBankApi();
-    await api.resetDemo();
-    setResetting(false);
-    window.location.reload();
-  }
-
-  const devices = [
-    { name: "Windows Desktop · Chrome", location: "San Antonio, TX", active: true, last: "Just now" },
-    { name: "iPhone 15 · Safari", location: "San Antonio, TX", active: true, last: "Yesterday" },
-  ];
+  const device = {
+    name: "This browser",
+    location: "Current session",
+    last: "Just now",
+  };
 
   return (
     <>
@@ -114,8 +104,8 @@ export function SecurityClient({ email }: { email: string }) {
               <h2 className="font-bold text-usaa-900">Two-step verification</h2>
             </div>
             <p className="mt-2 text-sm text-slate-500">
-              Always on. Every sign-on is confirmed with a 6-digit code, delivered
-              inline in this demo since no email/SMS provider is attached.
+              Always on. Every sign-on is confirmed with a 6-digit code sent to
+              the email on your account.
             </p>
             <span className="mt-3 inline-block rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
               Enabled
@@ -125,37 +115,21 @@ export function SecurityClient({ email }: { email: string }) {
           <div className="card p-6">
             <div className="flex items-center gap-2">
               <Monitor className="h-5 w-5 text-usaa-700" />
-              <h2 className="font-bold text-usaa-900">Trusted devices</h2>
+              <h2 className="font-bold text-usaa-900">Current session</h2>
             </div>
             <div className="mt-4 space-y-3">
-              {devices.map((d) => (
-                <div key={d.name} className="flex items-center justify-between rounded-lg border border-slate-100 p-3 text-sm">
-                  <div>
-                    <p className="font-semibold text-slate-800">{d.name}</p>
-                    <p className="text-xs text-slate-400">
-                      {d.location} · {d.last}
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-                    Trusted
-                  </span>
+              <div className="flex items-center justify-between rounded-lg border border-slate-100 p-3 text-sm">
+                <div>
+                  <p className="font-semibold text-slate-800">{device.name}</p>
+                  <p className="text-xs text-slate-400">
+                    {device.location} · {device.last}
+                  </p>
                 </div>
-              ))}
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                  Active
+                </span>
+              </div>
             </div>
-          </div>
-
-          <div className="card p-6">
-            <div className="flex items-center gap-2">
-              <RefreshCw className="h-5 w-5 text-usaa-700" />
-              <h2 className="font-bold text-usaa-900">Reset demo data</h2>
-            </div>
-            <p className="mt-2 text-sm text-slate-500">
-              Wipe everything and regenerate the sample accounts, transactions,
-              payees and contacts.
-            </p>
-            <button onClick={resetData} disabled={resetting} className="btn-secondary mt-4 w-full">
-              {resetting ? "Resetting…" : "Reset all demo data"}
-            </button>
           </div>
         </div>
       </div>
