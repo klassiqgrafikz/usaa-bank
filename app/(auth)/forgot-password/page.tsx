@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { ResendButton } from "@/components/auth/resend-button";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -9,35 +10,33 @@ export default function ForgotPasswordPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  async function sendRecovery(): Promise<string | null> {
+    const res = await fetch("/api/auth/email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "recovery", email: email.trim() }),
+    });
+    const data = (await res.json()) as { ok: boolean; error?: string };
+    return data.ok ? null : data.error ?? "We couldn't send that email. Try again.";
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setNotice(null);
     setLoading(true);
 
-    try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-        email.trim(),
-        {
-          redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
-        },
-      );
+    const err = await sendRecovery();
+    setLoading(false);
 
-      if (resetError) {
-        setError(resetError.message);
-        return;
-      }
-
-      setNotice(
-        "If that email is registered, we've sent you a link to choose a new password. Check your inbox.",
-      );
-    } catch {
-      setError("Unable to reach the server. Try again.");
-    } finally {
-      setLoading(false);
+    if (err) {
+      setError(err);
+      return;
     }
+
+    setNotice(
+      "If that email is registered, we've sent you a link to choose a new password. Check your inbox, including spam.",
+    );
   }
 
   return (
@@ -79,6 +78,16 @@ export default function ForgotPasswordPage() {
           {loading ? "One moment…" : "Continue"}
         </button>
       </form>
+
+      {notice && (
+        <div className="mt-6 border-t border-slate-100 pt-4">
+          <ResendButton
+            label="Resend email"
+            successMessage="Reset email re-sent."
+            onResend={sendRecovery}
+          />
+        </div>
+      )}
 
       <div className="mt-6 text-center text-sm text-slate-600">
         Remembered it?{" "}

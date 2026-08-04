@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ResendButton } from "@/components/auth/resend-button";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -21,34 +22,36 @@ export default function SignupPage() {
     setNotice(null);
     setLoading(true);
 
-    const { createClient } = await import("@/lib/supabase/client");
-    const supabase = createClient();
-    const { data, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { first_name: firstName, last_name: lastName },
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/bank/dashboard`,
-      },
+    const res = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        firstName,
+        lastName,
+        email,
+        password,
+      }),
     });
+    const data = (await res.json()) as {
+      ok: boolean;
+      session?: boolean;
+      error?: string;
+    };
 
-    if (authError) {
-      setError(authError.message);
+    if (!data.ok) {
+      setError(data.error ?? "Something went wrong creating your account.");
       setLoading(false);
       return;
     }
 
-    if (!data.session) {
-      setNotice(
-        "You're all set! Check your inbox to confirm your email address, then sign on to set up your account.",
-      );
-      setLoading(false);
+    if (data.session) {
+      router.push("/bank/dashboard");
+      router.refresh();
       return;
     }
 
-    await supabase.rpc("ensure_member_data");
-    router.push("/bank/dashboard");
-    router.refresh();
+    setNotice("Your account is ready. Sign on to get started.");
+    setLoading(false);
   }
 
   return (
@@ -140,6 +143,24 @@ export default function SignupPage() {
           {loading ? "Creating account…" : "Create account"}
         </button>
       </form>
+
+      {notice && (
+        <div className="mt-6 border-t border-slate-100 pt-4">
+          <ResendButton
+            label="Resend confirmation email"
+            successMessage="Confirmation email re-sent."
+            onResend={async () => {
+              const res = await fetch("/api/auth/email", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ type: "signup", email, firstName }),
+              });
+              const data = (await res.json()) as { ok: boolean; error?: string };
+              return data.ok ? null : data.error ?? "We couldn't resend the email. Try again.";
+            }}
+          />
+        </div>
+      )}
 
       <div className="mt-6 border-t border-slate-100 pt-4 text-center text-sm text-slate-600">
         Already have an account?{" "}

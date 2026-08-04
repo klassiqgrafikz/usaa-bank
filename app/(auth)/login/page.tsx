@@ -32,12 +32,14 @@ function LoginInner() {
         return;
       }
 
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
-        options: { shouldCreateUser: false },
+      const res = await fetch("/api/auth/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
       });
-      if (otpError) {
-        setError(otpError.message);
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (!data.ok) {
+        setError(data.error ?? "We couldn't send your code. Try again.");
         return;
       }
 
