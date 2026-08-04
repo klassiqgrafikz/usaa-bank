@@ -141,7 +141,11 @@ export default function DashboardPage() {
               </Link>
             </div>
             <div className="px-5">
-              <TransactionList transactions={txWithAccount as Transaction[]} showAccount />
+              <TransactionList
+                transactions={txWithAccount as Transaction[]}
+                showAccount
+                accountNameFor={(tx) => accountName.get(tx.account_id) ?? null}
+              />
             </div>
           </div>
         </div>

@@ -132,7 +132,10 @@ export default function AccountDetailPage() {
             <div className="mb-4">
               <BalanceChart data={chartData} />
             </div>
-            <TransactionList transactions={transactions.slice(0, 12)} />
+            <TransactionList
+              transactions={transactions.slice(0, 12)}
+              accountNameFor={() => account.name}
+            />
           </div>
         </div>
 

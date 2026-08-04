@@ -1,5 +1,14 @@
-import { ArrowDownLeft, ArrowUpRight, type LucideIcon } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  ChevronRight,
+  type LucideIcon,
+} from "lucide-react";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
+import { TransactionDetailsModal } from "@/components/banking/transaction-details-modal";
 import type { Transaction } from "@/lib/types";
 
 const categoryColors: Record<string, string> = {
@@ -21,20 +30,22 @@ const categoryColors: Record<string, string> = {
 export function TransactionRow({
   tx,
   showAccount = false,
+  onClick,
 }: {
   tx: Transaction;
   showAccount?: boolean;
+  onClick?: () => void;
 }) {
   const incoming = tx.amount_cents > 0;
   const Icon: LucideIcon = incoming ? ArrowDownLeft : ArrowUpRight;
   const color = categoryColors[tx.category] ?? "bg-slate-100 text-slate-700";
 
-  return (
-    <div className="flex items-center gap-4 py-3">
+  const content = (
+    <>
       <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", color)}>
         <Icon className="h-4 w-4" />
       </div>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 text-left">
         <p className="truncate text-sm font-medium text-slate-800">
           {tx.description}
         </p>
@@ -53,17 +64,35 @@ export function TransactionRow({
         {incoming ? "+" : "-"}
         {formatCurrency(Math.abs(tx.amount_cents))}
       </p>
-    </div>
+      {onClick && <ChevronRight className="h-4 w-4 shrink-0 text-slate-300" />}
+    </>
   );
+
+  if (onClick) {
+    return (
+      <button
+        onClick={onClick}
+        className="flex w-full items-center gap-4 py-3 text-left transition-colors hover:bg-slate-50"
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return <div className="flex items-center gap-4 py-3">{content}</div>;
 }
 
 export function TransactionList({
   transactions,
   showAccount = false,
+  accountNameFor,
 }: {
   transactions: Transaction[];
   showAccount?: boolean;
+  accountNameFor?: (tx: Transaction) => string | null;
 }) {
+  const [selected, setSelected] = useState<Transaction | null>(null);
+
   if (transactions.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-slate-400">
@@ -71,11 +100,25 @@ export function TransactionList({
       </p>
     );
   }
+
   return (
     <div className="divide-y divide-slate-100">
       {transactions.map((tx) => (
-        <TransactionRow key={tx.id} tx={tx} showAccount={showAccount} />
+        <TransactionRow
+          key={tx.id}
+          tx={tx}
+          showAccount={showAccount}
+          onClick={() => setSelected(tx)}
+        />
       ))}
+
+      {selected && (
+        <TransactionDetailsModal
+          tx={selected}
+          accountName={accountNameFor?.(selected)}
+          onClose={() => setSelected(null)}
+        />
+      )}
     </div>
   );
 }

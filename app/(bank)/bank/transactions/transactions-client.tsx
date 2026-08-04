@@ -225,7 +225,10 @@ export function TransactionsClient({
             </p>
           ) : (
             <div className="min-w-[560px] px-5">
-              <TransactionList transactions={filtered} />
+              <TransactionList
+                transactions={filtered}
+                accountNameFor={(tx) => accountName.get(tx.account_id) ?? null}
+              />
             </div>
           )}
         </div>
