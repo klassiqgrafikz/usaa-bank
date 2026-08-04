@@ -3,20 +3,21 @@
 import Link from "next/link";
 import {
   ArrowLeftRight,
+  Banknote,
+  ChevronRight,
   ReceiptText,
   Send,
-  Camera,
-  ChevronRight,
 } from "lucide-react";
 import { useBankData } from "@/lib/use-bank-data";
 import { PageHeader } from "@/components/banking/page-header";
 import { TransactionList } from "@/components/banking/transaction-row";
 import { BalanceChart } from "@/components/banking/balance-chart";
+import { CopyValue } from "@/components/banking/copy-value";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import type { Account, Transaction } from "@/lib/types";
 
 export default function DashboardPage() {
-  const { data, error, reload } = useBankData(async (api) => {
+  const { data, error } = useBankData(async (api) => {
     const [accounts, transactions, alerts] = await Promise.all([
       api.getAccounts(),
       api.getTransactions(8),
@@ -33,15 +34,18 @@ export default function DashboardPage() {
   }
 
   const { accounts, transactions, alerts } = data;
-  void reload;
 
   const assets = accounts
     .filter((a) => a.type !== "credit_card" && a.type !== "loan")
     .reduce((sum, a) => sum + a.balance_cents, 0);
-  const liabilities = accounts
-    .filter((a) => a.type === "credit_card" || a.type === "loan")
-    .reduce((sum, a) => sum + a.balance_cents, 0);
-  const netWorth = assets - liabilities;
+
+  const totalAvailable = accounts.reduce(
+    (sum, a) => sum + a.available_cents,
+    0,
+  );
+
+  const primary =
+    accounts.find((a) => a.type === "checking") ?? accounts[0] ?? null;
 
   const accountName = new Map(accounts.map((a) => [a.id, a.name]));
   const txWithAccount = transactions.map((tx) => ({
@@ -51,18 +55,6 @@ export default function DashboardPage() {
 
   const chartData = buildChartData(accounts, transactions);
 
-  const totalAvailable = accounts.reduce(
-    (sum, a) => sum + a.available_cents,
-    0,
-  );
-
-  const quickActions = [
-    { href: "/bank/transfers", label: "Transfer", icon: ArrowLeftRight },
-    { href: "/bank/billpay", label: "Pay bills", icon: ReceiptText },
-    { href: "/bank/pay", label: "Send money", icon: Send },
-    { href: "/bank/deposits", label: "Deposit a check", icon: Camera },
-  ];
-
   return (
     <>
       <PageHeader
@@ -70,29 +62,63 @@ export default function DashboardPage() {
         subtitle="Here's what's happening with your money today."
       />
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="card p-5">
-              <p className="text-xs font-medium text-slate-500">Total balance</p>
-              <p className="mt-1 text-2xl font-extrabold text-usaa-900">
-                {formatCurrency(assets)}
-              </p>
-            </div>
-            <div className="card p-5">
-              <p className="text-xs font-medium text-slate-500">Net worth</p>
-              <p className="mt-1 text-2xl font-extrabold text-usaa-900">
-                {formatCurrency(netWorth)}
-              </p>
-            </div>
-            <div className="card p-5">
-              <p className="text-xs font-medium text-slate-500">Total available</p>
-              <p className="mt-1 text-2xl font-extrabold text-usaa-900">
-                {formatCurrency(totalAvailable)}
-              </p>
-            </div>
+      <div className="rounded-xl bg-gradient-to-br from-usaa-800 to-usaa-950 p-6 text-white shadow-sm sm:p-8">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm font-medium text-slate-300">Total balance</p>
+            <p className="mt-2 text-4xl font-extrabold tracking-tight">
+              {formatCurrency(assets)}
+            </p>
+            <p className="mt-2 text-sm text-slate-300">
+              Total available {formatCurrency(totalAvailable)}
+            </p>
+            {primary && (
+              <div className="mt-5 inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2">
+                <span className="text-xs font-medium text-slate-300">
+                  {primary.name}
+                </span>
+                <CopyValue
+                  value={primary.account_number}
+                  ariaLabel="Copy account number"
+                  tone="dark"
+                />
+              </div>
+            )}
           </div>
 
+          <div className="grid w-full grid-cols-2 gap-3 lg:w-80">
+            <Link
+              href="/bank/transfers"
+              className="flex flex-col items-center gap-2 rounded-xl bg-white p-5 text-center shadow-sm transition-transform hover:scale-[1.02]"
+            >
+              <ArrowLeftRight className="h-6 w-6 text-usaa-700" />
+              <span className="text-sm font-bold text-usaa-900">Transfer</span>
+            </Link>
+            <Link
+              href="/bank/deposits"
+              className="flex flex-col items-center gap-2 rounded-xl bg-white p-5 text-center shadow-sm transition-transform hover:scale-[1.02]"
+            >
+              <Banknote className="h-6 w-6 text-usaa-700" />
+              <span className="text-sm font-bold text-usaa-900">Deposit</span>
+            </Link>
+            <Link
+              href="/bank/billpay"
+              className="flex items-center justify-center gap-2 rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold text-slate-200 transition-colors hover:bg-white/10"
+            >
+              <ReceiptText className="h-4 w-4" /> Pay bills
+            </Link>
+            <Link
+              href="/bank/pay"
+              className="flex items-center justify-center gap-2 rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold text-slate-200 transition-colors hover:bg-white/10"
+            >
+              <Send className="h-4 w-4" /> Send money
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <div className="space-y-4 lg:col-span-2">
           <div className="card p-5">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-bold text-usaa-900">Balance trend</h2>
@@ -116,48 +142,48 @@ export default function DashboardPage() {
 
         <div className="space-y-4">
           <div className="card p-5">
-            <h2 className="font-bold text-usaa-900">Quick actions</h2>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              {quickActions.map((qa) => (
-                <Link
-                  key={qa.label}
-                  href={qa.href}
-                  className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 p-4 text-center transition-colors hover:border-usaa-400 hover:bg-usaa-50"
-                >
-                  <qa.icon className="h-5 w-5 text-usaa-700" />
-                  <span className="text-xs font-semibold text-slate-700">
-                    {qa.label}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          <div className="card p-5">
             <h2 className="font-bold text-usaa-900">Your accounts</h2>
             <div className="mt-3 space-y-3">
               {accounts.slice(0, 4).map((a) => (
-                <Link
+                <div
                   key={a.id}
-                  href={`/bank/accounts/${a.id}`}
-                  className="flex items-center justify-between rounded-lg border border-slate-100 p-3 transition-colors hover:bg-slate-50"
+                  className="flex items-center gap-3 rounded-lg border border-slate-100 p-3 transition-colors hover:bg-slate-50"
                 >
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">{a.name}</p>
-                    <p className="text-xs text-slate-400">
-                      {a.type === "credit_card" ? "Credit card" : a.type.replace("_", " ")} · ••{a.account_number.slice(-4)}
-                    </p>
-                  </div>
-                  <p className="text-sm font-bold text-usaa-900">
-                    {(a.type === "credit_card" || a.type === "loan") && a.balance_cents > 0
+                  <Link
+                    href={`/bank/accounts/${a.id}`}
+                    className="flex min-w-0 flex-1 flex-col"
+                  >
+                    <span className="truncate text-sm font-semibold text-slate-800">
+                      {a.name}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      {a.type === "credit_card"
+                        ? "Credit card"
+                        : a.type.replace("_", " ")}{" "}
+                      · ••{a.account_number.slice(-4)}
+                    </span>
+                  </Link>
+                  <CopyValue
+                    value={a.account_number}
+                    ariaLabel="Copy account number"
+                  />
+                  <Link
+                    href={`/bank/accounts/${a.id}`}
+                    className="shrink-0 text-right text-sm font-bold text-usaa-900"
+                  >
+                    {(a.type === "credit_card" || a.type === "loan") &&
+                    a.balance_cents > 0
                       ? "-"
                       : ""}
                     {formatCurrency(Math.abs(a.balance_cents))}
-                  </p>
-                </Link>
+                  </Link>
+                </div>
               ))}
             </div>
-            <Link href="/bank/accounts" className="link mt-3 inline-flex items-center gap-1 text-sm">
+            <Link
+              href="/bank/accounts"
+              className="link mt-3 inline-flex items-center gap-1 text-sm"
+            >
               All accounts <ChevronRight className="h-3.5 w-3.5" />
             </Link>
           </div>

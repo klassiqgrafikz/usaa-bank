@@ -7,13 +7,13 @@ import {
   ArrowLeftRight,
   Camera,
   ChevronDown,
-  Copy,
   Lock,
 } from "lucide-react";
 import { useBankData } from "@/lib/use-bank-data";
 import { PageHeader } from "@/components/banking/page-header";
 import { TransactionList } from "@/components/banking/transaction-row";
 import { BalanceChart } from "@/components/banking/balance-chart";
+import { CopyValue } from "@/components/banking/copy-value";
 import { formatCurrency, formatDate, titleCase, cn } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
 
@@ -121,13 +121,10 @@ export default function AccountDetailPage() {
             <h2 className="font-bold text-usaa-900">Account essentials</h2>
             <dl className="mt-4 space-y-3 text-sm">
               <Row label="Account number">
-                <span className="font-mono">{account.account_number}</span>
-                <button className="ml-1 text-slate-400 hover:text-usaa-700" aria-label="Copy">
-                  <Copy className="h-3.5 w-3.5" />
-                </button>
+                <CopyValue value={account.account_number} ariaLabel="Copy account number" />
               </Row>
               <Row label="Routing number">
-                <span className="font-mono">{account.routing_number}</span>
+                <CopyValue value={account.routing_number} ariaLabel="Copy routing number" />
               </Row>
               <Row label="Opened">
                 {formatDate(account.opened_at)}
