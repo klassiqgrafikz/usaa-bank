@@ -33,7 +33,7 @@ export function StatementsClient({
     for (const a of accounts) {
       const rows: Statement[] = [];
       const now = new Date();
-      for (let i = 0; i < 12; i++) {
+      for (let i = 1; i <= 12; i++) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const key = `${d.getFullYear()}-${d.getMonth()}`;
         const txs = transactions
@@ -43,7 +43,7 @@ export function StatementsClient({
             return `${td.getFullYear()}-${td.getMonth()}` === key;
           })
           .sort((x, y) => new Date(x.posted_at).getTime() - new Date(y.posted_at).getTime());
-        if (txs.length === 0 && i > 0) continue;
+        if (txs.length === 0) continue;
         const credits = txs.filter((t) => t.amount_cents > 0).reduce((s, t) => s + t.amount_cents, 0);
         const debits = txs.filter((t) => t.amount_cents < 0).reduce((s, t) => s + t.amount_cents, 0);
         const end = txs.reduce((s, t) => s + t.amount_cents, 0);
