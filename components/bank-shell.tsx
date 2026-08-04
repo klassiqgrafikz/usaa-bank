@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Wallet,
@@ -17,7 +18,9 @@ import {
   UserRound,
   LifeBuoy,
   LogOut,
+  Menu,
   Search,
+  X,
 } from "lucide-react";
 import { initials } from "@/lib/utils";
 import type { Profile } from "@/lib/types";
@@ -46,18 +49,92 @@ function SidebarLink({
   label,
   icon: Icon,
   pathname,
+  onClick,
 }: {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   pathname: string;
+  onClick?: () => void;
 }) {
   const active = pathname === href || pathname.startsWith(`${href}/`);
   return (
-    <Link href={href} className={active ? "sidebar-link-active" : "sidebar-link"}>
+    <Link
+      href={href}
+      onClick={onClick}
+      className={active ? "sidebar-link-active" : "sidebar-link"}
+    >
       <Icon className="h-4.5 w-4.5 shrink-0" />
       {label}
     </Link>
+  );
+}
+
+function SidebarNav({
+  pathname,
+  signOut,
+  onClose,
+}: {
+  pathname: string;
+  signOut: () => void;
+  onClose?: () => void;
+}) {
+  return (
+    <>
+      <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
+        <Link href="/bank/dashboard" onClick={onClose}>
+          <span className="text-xl font-extrabold text-white">
+            USAA<span className="text-crimson-500">.</span>
+          </span>
+        </Link>
+        {onClose && (
+          <button
+            onClick={onClose}
+            aria-label="Close menu"
+            className="rounded-md p-1.5 text-slate-300 hover:bg-white/10 hover:text-white"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
+      </div>
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+        <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          Overview
+        </p>
+        {nav.map((item) => (
+          <SidebarLink
+            key={item.href}
+            href={item.href}
+            label={item.label}
+            icon={item.icon}
+            pathname={pathname}
+            onClick={onClose}
+          />
+        ))}
+        <p className="px-3 pb-1 pt-5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          Settings
+        </p>
+        {settings.map((item) => (
+          <SidebarLink
+            key={item.href}
+            href={item.href}
+            label={item.label}
+            icon={item.icon}
+            pathname={pathname}
+            onClick={onClose}
+          />
+        ))}
+      </nav>
+      <div className="border-t border-white/10 p-4">
+        <button
+          onClick={signOut}
+          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-white/10"
+        >
+          <LogOut className="h-4 w-4" />
+          Sign off
+        </button>
+      </div>
+    </>
   );
 }
 
@@ -70,6 +147,22 @@ export function BankShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [prevPathname, setPrevPathname] = useState(pathname);
+
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
+    setMenuOpen(false);
+  }
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
 
   async function signOut() {
     const supabase = (await import("@/lib/supabase/client")).createClient();
@@ -81,52 +174,35 @@ export function BankShell({
   return (
     <div className="flex min-h-screen bg-slate-50">
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col bg-usaa-900 lg:flex">
-        <div className="flex h-16 items-center gap-2 border-b border-white/10 px-5">
-          <Link href="/bank/dashboard">
-            <span className="text-xl font-extrabold text-white">
-              USAA<span className="text-crimson-500">.</span>
-            </span>
-          </Link>
-        </div>
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-            Overview
-          </p>
-          {nav.map((item) => (
-            <SidebarLink
-              key={item.href}
-              href={item.href}
-              label={item.label}
-              icon={item.icon}
-              pathname={pathname}
-            />
-          ))}
-          <p className="px-3 pb-1 pt-5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-            Settings
-          </p>
-          {settings.map((item) => (
-            <SidebarLink
-              key={item.href}
-              href={item.href}
-              label={item.label}
-              icon={item.icon}
-              pathname={pathname}
-            />
-          ))}
-        </nav>
-        <div className="border-t border-white/10 p-4">
-          <button
-            onClick={signOut}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-white/10"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign off
-          </button>
-        </div>
+        <SidebarNav pathname={pathname} signOut={signOut} />
       </aside>
+
+      {menuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="absolute inset-0 bg-black/50"
+            aria-hidden="true"
+            onClick={() => setMenuOpen(false)}
+          />
+          <aside className="absolute inset-y-0 left-0 flex w-64 flex-col bg-usaa-900 shadow-xl">
+            <SidebarNav
+              pathname={pathname}
+              signOut={signOut}
+              onClose={() => setMenuOpen(false)}
+            />
+          </aside>
+        </div>
+      )}
 
       <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
         <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-slate-200 bg-white px-4 sm:px-6">
+          <button
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open menu"
+            className="rounded-md p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
           <Link href="/bank/dashboard" className="lg:hidden">
             <span className="text-lg font-extrabold text-usaa-900">
               USAA<span className="text-crimson-600">.</span>
