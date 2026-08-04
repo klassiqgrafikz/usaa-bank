@@ -39,9 +39,9 @@ export function CopyValue({
   }
 
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 transition-colors",
+      <span
+        className={cn(
+          "inline-flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-0.5 transition-colors",
         tone === "dark" ? "hover:bg-white/10" : "hover:bg-slate-100",
         className,
       )}

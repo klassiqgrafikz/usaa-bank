@@ -46,7 +46,7 @@ export function TransactionRow({
       </div>
       <p
         className={cn(
-          "whitespace-nowrap text-sm font-semibold",
+          "shrink-0 whitespace-nowrap text-sm font-semibold",
           incoming ? "text-emerald-600" : "text-slate-800",
         )}
       >

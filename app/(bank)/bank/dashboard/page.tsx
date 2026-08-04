@@ -62,9 +62,9 @@ export default function DashboardPage() {
         subtitle="Here's what's happening with your money today."
       />
 
-      <div className="-mx-4 rounded-none border-b border-white/10 bg-gradient-to-br from-usaa-800 to-usaa-950 p-6 text-white shadow-sm sm:mx-0 sm:rounded-xl sm:border-0 sm:p-8">
+      <div className="-mx-4 rounded-none border-b border-white/10 bg-gradient-to-br from-usaa-800 to-usaa-950 p-5 text-white shadow-sm sm:mx-0 sm:rounded-xl sm:border-0 sm:p-8">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-medium text-slate-300">Total balance</p>
             <p className="mt-2 text-4xl font-extrabold tracking-tight">
               {formatCurrency(assets)}
@@ -73,8 +73,8 @@ export default function DashboardPage() {
               Total available {formatCurrency(totalAvailable)}
             </p>
             {primary && (
-              <div className="mt-5 inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2">
-                <span className="text-xs font-medium text-slate-300">
+              <div className="mt-5 inline-flex max-w-full items-center gap-2 rounded-lg bg-white/10 px-3 py-2">
+                <span className="min-w-0 truncate text-xs font-medium text-slate-300">
                   {primary.name}
                 </span>
                 <CopyValue
@@ -89,29 +89,35 @@ export default function DashboardPage() {
           <div className="grid w-full grid-cols-2 gap-3 lg:w-80">
             <Link
               href="/bank/transfers"
-              className="flex flex-col items-center gap-2 rounded-xl bg-white p-5 text-center shadow-sm transition-transform hover:scale-[1.02]"
+              className="flex h-full flex-col items-center justify-center gap-1.5 rounded-xl bg-white p-4 text-center shadow-sm transition-transform hover:scale-[1.02] sm:p-5"
             >
-              <ArrowLeftRight className="h-6 w-6 text-usaa-700" />
-              <span className="text-sm font-bold text-usaa-900">Transfer</span>
+              <ArrowLeftRight className="h-5 w-5 text-usaa-700 sm:h-6 sm:w-6" />
+              <span className="text-sm font-bold leading-tight text-usaa-900">
+                Transfer
+              </span>
             </Link>
             <Link
               href="/bank/deposits"
-              className="flex flex-col items-center gap-2 rounded-xl bg-white p-5 text-center shadow-sm transition-transform hover:scale-[1.02]"
+              className="flex h-full flex-col items-center justify-center gap-1.5 rounded-xl bg-white p-4 text-center shadow-sm transition-transform hover:scale-[1.02] sm:p-5"
             >
-              <Banknote className="h-6 w-6 text-usaa-700" />
-              <span className="text-sm font-bold text-usaa-900">Deposit</span>
+              <Banknote className="h-5 w-5 text-usaa-700 sm:h-6 sm:w-6" />
+              <span className="text-sm font-bold leading-tight text-usaa-900">
+                Deposit
+              </span>
             </Link>
             <Link
               href="/bank/billpay"
-              className="flex items-center justify-center gap-2 rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold text-slate-200 transition-colors hover:bg-white/10"
+              className="flex h-full flex-col items-center justify-center gap-1.5 rounded-xl border border-white/15 p-4 text-center text-sm font-semibold leading-tight text-slate-200 transition-colors hover:bg-white/10 sm:p-5"
             >
-              <ReceiptText className="h-4 w-4" /> Pay bills
+              <ReceiptText className="h-5 w-5 text-slate-200 sm:h-6 sm:w-6" />
+              Pay bills
             </Link>
             <Link
               href="/bank/pay"
-              className="flex items-center justify-center gap-2 rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold text-slate-200 transition-colors hover:bg-white/10"
+              className="flex h-full flex-col items-center justify-center gap-1.5 rounded-xl border border-white/15 p-4 text-center text-sm font-semibold leading-tight text-slate-200 transition-colors hover:bg-white/10 sm:p-5"
             >
-              <Send className="h-4 w-4" /> Send money
+              <Send className="h-5 w-5 text-slate-200 sm:h-6 sm:w-6" />
+              Send money
             </Link>
           </div>
         </div>
@@ -147,7 +153,7 @@ export default function DashboardPage() {
               {accounts.slice(0, 4).map((a) => (
                 <div
                   key={a.id}
-                  className="flex items-center gap-3 rounded-lg border border-slate-100 p-3 transition-colors hover:bg-slate-50"
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-slate-100 p-3 transition-colors hover:bg-slate-50"
                 >
                   <Link
                     href={`/bank/accounts/${a.id}`}

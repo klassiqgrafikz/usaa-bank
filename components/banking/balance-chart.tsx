@@ -16,7 +16,7 @@ export function BalanceChart({
   data: { label: string; amount: number }[];
 }) {
   return (
-    <div className="h-64 w-full">
+    <div className="h-52 w-full sm:h-64">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
           <defs>
