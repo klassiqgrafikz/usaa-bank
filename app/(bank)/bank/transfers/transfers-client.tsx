@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { jsPDF } from "jspdf";
 import { BadgeCheck, CheckCircle2, Download, Loader2, X } from "lucide-react";
 import { PageHeader } from "@/components/banking/page-header";
@@ -50,32 +50,41 @@ export function TransfersClient({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
-  const lookupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nameCache = useRef(new Map<string, string>());
+  const latestLookup = useRef("");
 
   const supabase = createClient();
 
-  useEffect(() => {
-    return () => {
-      if (lookupTimer.current) clearTimeout(lookupTimer.current);
-    };
-  }, []);
-
   async function lookUpMember(acct: string) {
-    setLookup("checking");
-    try {
-      const { data } = await supabase.rpc("lookup_member_by_account", {
-        p_account_number: acct,
-      }) as { data: { found: boolean; name?: string } | null };
-      if (externalAcct !== acct) return;
-      if (data?.found && data.name) {
-        setExternalName(data.name);
+    latestLookup.current = acct;
+    const cached = nameCache.current.get(acct);
+    if (cached !== undefined) {
+      if (cached) {
+        setExternalName(cached);
         setLookup("found");
       } else {
         setExternalName("");
         setLookup("missing");
       }
+      return;
+    }
+    setLookup("checking");
+    try {
+      const { data } = await supabase.rpc("lookup_member_by_account", {
+        p_account_number: acct,
+      }) as { data: { found: boolean; name?: string } | null };
+      if (latestLookup.current !== acct) return;
+      if (data?.found && data.name) {
+        nameCache.current.set(acct, data.name);
+        setExternalName(data.name);
+        setLookup("found");
+      } else {
+        nameCache.current.set(acct, "");
+        setExternalName("");
+        setLookup("missing");
+      }
     } catch {
-      if (externalAcct !== acct) return;
+      if (latestLookup.current !== acct) return;
       setLookup("missing");
     }
   }
@@ -84,17 +93,23 @@ export function TransfersClient({
     const clean = value.replace(/\D/g, "");
     setExternalAcct(clean);
     if (isWire) {
+      latestLookup.current = "";
       setLookup("idle");
       return;
     }
-    if (lookupTimer.current) clearTimeout(lookupTimer.current);
     if (clean.length === 10 || clean.length === 16) {
-      lookupTimer.current = setTimeout(() => {
-        void lookUpMember(clean);
-      }, 400);
-    } else {
+      void lookUpMember(clean);
+    } else if (clean.length < 10) {
+      latestLookup.current = "";
       setExternalName("");
       setLookup("idle");
+    }
+  }
+
+  function onAcctBlur() {
+    const clean = externalAcct;
+    if (clean.length === 10 || clean.length === 16) {
+      void lookUpMember(clean);
     }
   }
 
@@ -139,6 +154,10 @@ export function TransfersClient({
       } else {
         if (!externalAcct) {
           setError("Enter the recipient account number.");
+          return;
+        }
+        if (externalAcct.length !== 10 && externalAcct.length !== 16) {
+          setError("Account number must be 10 or 16 digits.");
           return;
         }
         if (lookup !== "found") {
@@ -344,6 +363,7 @@ export function TransfersClient({
                     className="input"
                     value={externalAcct}
                     onChange={(e) => onAcctChange(e.target.value, dest === "wire")}
+                    onBlur={onAcctBlur}
                     placeholder="Enter full account number"
                     inputMode="numeric"
                     required
