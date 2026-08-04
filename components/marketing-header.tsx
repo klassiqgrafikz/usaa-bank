@@ -2,10 +2,12 @@ import Link from "next/link";
 import { Logo } from "@/components/logo";
 
 const nav = [
-  { href: "/banking", label: "Banking" },
   { href: "/insurance", label: "Insurance" },
+  { href: "/banking", label: "Banking" },
   { href: "/investing", label: "Investing" },
-  { href: "/help", label: "Help & Support" },
+  { href: "/investing", label: "Retirement" },
+  { href: "/help", label: "Advice" },
+  { href: "/help", label: "Help" },
 ];
 
 export function MarketingHeader() {
@@ -14,10 +16,10 @@ export function MarketingHeader() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-4 sm:px-6">
         <div className="flex items-center gap-8">
           <Logo />
-          <nav className="hidden items-center gap-1 md:flex">
+          <nav className="hidden items-center gap-1 lg:flex">
             {nav.map((item) => (
               <Link
-                key={item.href}
+                key={item.label}
                 href={item.href}
                 className="rounded-md px-3 py-2 text-sm font-semibold text-usaa-800 transition-colors hover:bg-usaa-50 hover:text-usaa-600"
               >
@@ -27,14 +29,17 @@ export function MarketingHeader() {
           </nav>
         </div>
         <div className="flex items-center gap-3">
-          <span className="hidden text-xs font-medium text-slate-500 lg:block">
-            Membership for the armed forces community and their families
+          <span className="hidden text-xs font-semibold text-slate-600 xl:block">
+            1-800-531-USAA{" "}
+            <span className="font-normal text-slate-400">
+              (1-800-531-8722)
+            </span>
           </span>
-          <Link href="/signup" className="btn-primary hidden sm:inline-flex">
+          <Link href="/signup" className="btn-secondary hidden sm:inline-flex">
             Open Account
           </Link>
           <Link href="/login" className="btn-primary">
-            Sign On
+            Log On
           </Link>
         </div>
       </div>

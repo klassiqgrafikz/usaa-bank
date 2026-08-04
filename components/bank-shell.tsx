@@ -83,8 +83,14 @@ function SidebarNav({
     <>
       <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
         <Link href="/bank/dashboard" onClick={onClose}>
-          <span className="text-xl font-extrabold text-white">
-            USAA<span className="text-crimson-500">.</span>
+          <span className="inline-flex items-center gap-2 text-xl font-extrabold text-white">
+            <img
+              src="/images/usaa-logo.svg"
+              alt=""
+              aria-hidden="true"
+              className="h-8 w-auto brightness-0 invert"
+            />
+            USAA
           </span>
         </Link>
         {onClose && (
@@ -204,8 +210,14 @@ export function BankShell({
             <Menu className="h-5 w-5" />
           </button>
           <Link href="/bank/dashboard" className="lg:hidden">
-            <span className="text-lg font-extrabold text-usaa-900">
-              USAA<span className="text-crimson-600">.</span>
+            <span className="inline-flex items-center gap-2 text-lg font-extrabold text-usaa-900">
+              <img
+                src="/images/usaa-logo.svg"
+                alt=""
+                aria-hidden="true"
+                className="h-7 w-auto"
+              />
+              USAA
             </span>
           </Link>
           <div className="relative hidden max-w-md flex-1 sm:block">
