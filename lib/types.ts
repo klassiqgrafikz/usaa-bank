@@ -58,6 +58,7 @@ export interface Transfer {
   from_account_id: string | null;
   to_account_id: string | null;
   external_name: string | null;
+  external_account: string | null;
   amount_cents: number;
   transfer_type: "internal" | "external" | "wire" | "zelle";
   schedule: "one_time" | "recurring";

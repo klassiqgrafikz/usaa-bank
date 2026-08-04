@@ -1,12 +1,25 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
+import { jsPDF } from "jspdf";
+import { CheckCircle2, Download, X } from "lucide-react";
 import { PageHeader } from "@/components/banking/page-header";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { getBankApi } from "@/lib/bank";
 import type { Account, Transfer } from "@/lib/types";
 
 type Dest = "internal" | "external" | "wire";
+
+interface Confirmation {
+  transferId: string;
+  amountCents: number;
+  dest: Dest;
+  fromName: string;
+  toLabel: string;
+  frequency: string | null;
+  note: string | null;
+  createdAt: string;
+}
 
 export function TransfersClient({
   accounts,
@@ -17,7 +30,6 @@ export function TransfersClient({
   transfers: Transfer[];
   onChanged?: () => void;
 }) {
-
   const spendable = accounts.filter((a) => a.type === "checking" || a.type === "savings");
   const internalTargets = accounts.filter((a) => a.type !== "loan");
 
@@ -33,13 +45,31 @@ export function TransfersClient({
   const [frequency, setFrequency] = useState("monthly");
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
+
+  const historyByAcct = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const t of transfers) {
+      if (t.external_account && !map.has(t.external_account)) {
+        map.set(t.external_account, t.external_name ?? "");
+      }
+    }
+    return map;
+  }, [transfers]);
+
+  function onAcctChange(value: string) {
+    const clean = value.replace(/\s/g, "");
+    setExternalAcct(clean);
+    const known = historyByAcct.get(clean);
+    if (known) {
+      setExternalName(known);
+    }
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    setSuccess(null);
     const cents = Math.round(parseFloat(amount) * 100);
     if (!cents || cents <= 0) {
       setError("Enter a valid amount.");
@@ -49,10 +79,10 @@ export function TransfersClient({
     setLoading(true);
     try {
       const api = await getBankApi();
-      let rpcError: { message: string } | null = null;
+      let res: { error: { message: string } | null; transferId: string | null };
 
       if (dest === "internal") {
-        const res = await api.createTransfer({
+        res = await api.createTransfer({
           internal: true,
           fromId,
           toId: toInternalId,
@@ -61,40 +91,136 @@ export function TransfersClient({
           frequency: schedule === "recurring" ? frequency : null,
           note: note || null,
         });
-        rpcError = res.error;
       } else {
-        const res = await api.createTransfer({
+        res = await api.createTransfer({
           internal: false,
           fromId,
           externalName:
             externalName +
             (dest === "wire" && externalAcct ? ` (ACCT •${externalAcct.slice(-4)})` : ""),
+          externalAccount: externalAcct || undefined,
           amountCents: cents,
           schedule,
           frequency: schedule === "recurring" ? frequency : null,
           note: note || null,
           isWire: dest === "wire",
         });
-        rpcError = res.error;
       }
 
-      if (rpcError) {
-        setError(rpcError.message);
+      if (res.error) {
+        setError(res.error.message);
         return;
       }
 
-      setSuccess(
-        schedule === "recurring"
-          ? "Recurring transfer scheduled."
-          : "Transfer completed successfully.",
-      );
+      const fromName = accounts.find((a) => a.id === fromId)?.name ?? "Account";
+      const toLabel =
+        dest === "internal"
+          ? accounts.find((a) => a.id === toInternalId)?.name ?? "Account"
+          : externalName;
+
+      setConfirmation({
+        transferId: res.transferId ?? crypto.randomUUID(),
+        amountCents: cents,
+        dest,
+        fromName,
+        toLabel,
+        frequency: schedule === "recurring" ? frequency : null,
+        note: note || null,
+        createdAt: new Date().toISOString(),
+      });
       setAmount("");
+      setNote("");
       onChanged?.();
     } catch {
       setError("Something went wrong. Try again.");
     } finally {
       setLoading(false);
     }
+  }
+
+  function closeConfirmation() {
+    setConfirmation(null);
+  }
+
+  function downloadReceiptPdf() {
+    if (!confirmation) return;
+    const c = confirmation;
+    const doc = new jsPDF();
+
+    doc.setFillColor(11, 35, 66);
+    doc.rect(0, 0, 210, 30, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.text("USAA", 14, 16);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text("ONLINE BANKING  ·  TRANSFER CONFIRMATION", 14, 23);
+    doc.setFillColor(240, 171, 0);
+    doc.rect(0, 30, 210, 3, "F");
+
+    doc.setFillColor(16, 185, 129);
+    doc.rect(14, 40, 182, 12, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text(
+      c.frequency ? "RECURRING TRANSFER SCHEDULED" : "TRANSFER SUCCESSFUL",
+      105,
+      48,
+      { align: "center" },
+    );
+
+    doc.setTextColor(11, 35, 66);
+    doc.setFontSize(24);
+    doc.text(`-${formatCurrency(c.amountCents)}`, 14, 66);
+
+    const rows: [string, string][] = [
+      ["Transaction ID", `TRF-${c.transferId.slice(0, 6).toUpperCase()}`],
+      ["Date", formatDate(c.createdAt)],
+      [
+        "Type",
+        c.dest === "internal"
+          ? "Internal transfer"
+          : c.dest === "wire"
+            ? "Wire transfer"
+            : "External transfer",
+      ],
+      ["From account", c.fromName],
+      ["To", c.toLabel],
+      ["Status", "Completed"],
+    ];
+    if (c.frequency) rows.push(["Schedule", `Recurring · ${c.frequency}`]);
+    if (c.note) rows.push(["Note", c.note]);
+
+    doc.setFontSize(10);
+    let y = 82;
+    for (const [label, value] of rows) {
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(100, 116, 139);
+      doc.text(label.toUpperCase(), 14, y);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(11, 35, 66);
+      doc.text(value, 110, y);
+      doc.setDrawColor(226, 232, 240);
+      doc.line(14, y + 4, 196, y + 4);
+      y += 12;
+    }
+
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text(
+      "This receipt confirms your transfer request. Funds may take 1-3 business days to appear.",
+      14,
+      280,
+    );
+    doc.text(
+      "USAA — protecting the armed forces community for over 100 years.",
+      14,
+      285,
+    );
+
+    doc.save(`usaa-transfer-${c.transferId.slice(0, 6)}.pdf`);
   }
 
   return (
@@ -162,6 +288,23 @@ export function TransfersClient({
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
+                  <label className="label">Account number</label>
+                  <input
+                    className="input"
+                    value={externalAcct}
+                    onChange={(e) => onAcctChange(e.target.value)}
+                    onBlur={() => {
+                      const known = historyByAcct.get(externalAcct);
+                      if (known) setExternalName(known);
+                    }}
+                    placeholder="Enter full account number"
+                    inputMode="numeric"
+                  />
+                  <p className="mt-1 text-xs text-slate-400">
+                    Name auto-fills from your transfer history.
+                  </p>
+                </div>
+                <div>
                   <label className="label">
                     {dest === "wire" ? "Recipient name" : "External bank / account name"}
                   </label>
@@ -169,16 +312,8 @@ export function TransfersClient({
                     className="input"
                     value={externalName}
                     onChange={(e) => setExternalName(e.target.value)}
+                    placeholder={dest === "wire" ? "Recipient" : "e.g. Chase checking"}
                     required
-                  />
-                </div>
-                <div>
-                  <label className="label">Account number</label>
-                  <input
-                    className="input"
-                    value={externalAcct}
-                    onChange={(e) => setExternalAcct(e.target.value.replace(/\s/g, ""))}
-                    placeholder="Last 4 shown on records"
                   />
                 </div>
               </div>
@@ -244,11 +379,6 @@ export function TransfersClient({
                 {error}
               </div>
             )}
-            {success && (
-              <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-                {success}
-              </div>
-            )}
 
             <button type="submit" disabled={loading} className="btn-primary w-full">
               {loading ? "Processing…" : dest === "wire" ? "Send wire" : "Continue"}
@@ -277,6 +407,7 @@ export function TransfersClient({
                       </p>
                       <p className="text-xs text-slate-400">
                         {formatDate(t.created_at)}
+                        {t.external_account && ` · •${t.external_account.slice(-4)}`}
                         {t.schedule === "recurring" && ` · ${t.frequency} recurring`}
                         {t.status !== "completed" && ` · ${t.status}`}
                       </p>
@@ -291,6 +422,92 @@ export function TransfersClient({
           </div>
         </div>
       </div>
+
+      {confirmation && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 px-4 pt-16 pb-10">
+          <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="relative bg-usaa-900 px-6 py-6 text-center">
+              <button
+                type="button"
+                onClick={closeConfirmation}
+                className="absolute right-4 top-4 text-slate-300 transition-colors hover:text-white"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-400" />
+              <h2 className="mt-2 text-xl font-extrabold text-white">Transfer successful</h2>
+              <p className="mt-1 text-sm text-slate-300">
+                {confirmation.frequency
+                  ? "Your recurring transfer has been scheduled."
+                  : "Your transfer is on its way."}
+              </p>
+              <p className="mt-3 text-3xl font-extrabold text-white">
+                -{formatCurrency(confirmation.amountCents)}
+              </p>
+            </div>
+
+            <div className="divide-y divide-slate-100 px-6 py-2 text-sm">
+              <div className="flex items-center justify-between py-3">
+                <span className="text-slate-400">Transaction ID</span>
+                <span className="font-semibold text-usaa-900">
+                  TRF-{confirmation.transferId.slice(0, 6).toUpperCase()}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-3">
+                <span className="text-slate-400">Date</span>
+                <span className="font-semibold text-slate-800">{formatDate(confirmation.createdAt)}</span>
+              </div>
+              <div className="flex items-center justify-between py-3">
+                <span className="text-slate-400">From</span>
+                <span className="font-semibold text-slate-800">{confirmation.fromName}</span>
+              </div>
+              <div className="flex items-center justify-between py-3">
+                <span className="text-slate-400">To</span>
+                <span className="font-semibold text-slate-800">{confirmation.toLabel}</span>
+              </div>
+              <div className="flex items-center justify-between py-3">
+                <span className="text-slate-400">Type</span>
+                <span className="font-semibold text-slate-800">
+                  {confirmation.dest === "internal"
+                    ? "Internal transfer"
+                    : confirmation.dest === "wire"
+                      ? "Wire transfer"
+                      : "External transfer"}
+                </span>
+              </div>
+              {confirmation.frequency && (
+                <div className="flex items-center justify-between py-3">
+                  <span className="text-slate-400">Schedule</span>
+                  <span className="font-semibold text-slate-800">
+                    Recurring · {confirmation.frequency}
+                  </span>
+                </div>
+              )}
+              {confirmation.note && (
+                <div className="flex items-center justify-between py-3">
+                  <span className="text-slate-400">Note</span>
+                  <span className="font-semibold text-slate-800">{confirmation.note}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 px-6 pb-6">
+              <button
+                type="button"
+                onClick={downloadReceiptPdf}
+                className="btn-secondary flex-1"
+              >
+                <Download className="h-4 w-4" />
+                Download PDF
+              </button>
+              <button type="button" onClick={closeConfirmation} className="btn-primary flex-1">
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -45,12 +45,16 @@ export interface BankApi {
     fromId: string;
     toId?: string;
     externalName?: string;
+    externalAccount?: string;
     amountCents: number;
     schedule?: string;
     frequency?: string | null;
     note?: string | null;
     isWire?: boolean;
-  }): Promise<OpResult>;
+  }): Promise<{
+    error: { message: string } | null;
+    transferId: string | null;
+  }>;
   createBillPayment(args: {
     payeeId: string;
     fromId: string;
@@ -203,8 +207,9 @@ function makeRealApi(supabase: ReturnType<typeof createClient>): BankApi {
               p_frequency: args.frequency ?? null,
               p_next_run: args.schedule === "recurring" ? new Date(Date.now() + 30 * 86400000).toISOString() : null,
               p_note: args.note ?? null,
+              p_external_account: args.externalAccount ?? null,
             });
-      return { error: rpc.error };
+      return { error: rpc.error, transferId: rpc.data ?? null };
     },
     async createBillPayment({ payeeId, fromId, amountCents, schedule = "one_time", frequency = null }) {
       const { error } = await supabase.rpc("make_bill_payment", {
