@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { Camera, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/banking/page-header";
-import { formatDate } from "@/lib/utils";
+import { formatDate, initials } from "@/lib/utils";
 import { getBankApi } from "@/lib/bank";
 import type { Profile } from "@/lib/types";
 
@@ -31,6 +33,11 @@ export function ProfileClient({
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url ?? null);
+  const [uploading, setUploading] = useState(false);
+  const [avatarMsg, setAvatarMsg] = useState<string | null>(null);
+  const router = useRouter();
+
   useEffect(() => {
     import("@/lib/supabase/client").then(({ createClient }) => {
       createClient().auth.getUser().then(({ data }) => {
@@ -38,6 +45,67 @@ export function ProfileClient({
       });
     });
   }, []);
+
+  async function uploadAvatar(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) {
+      setAvatarMsg("Photo must be 4MB or smaller.");
+      return;
+    }
+    setUploading(true);
+    setAvatarMsg(null);
+    try {
+      const supabase = (await import("@/lib/supabase/client")).createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("You must be signed on to upload a photo.");
+      const ext =
+        file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+      const path = `${user.id}/avatar.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true, cacheControl: "3600" });
+      if (upErr) throw new Error(upErr.message);
+      const url = supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+      const api = await getBankApi();
+      const { error } = await api.updateProfile({ avatar_url: url });
+      if (error) throw new Error(error.message);
+      setAvatarUrl(url);
+      onChanged?.();
+      router.refresh();
+    } catch (err) {
+      setAvatarMsg(err instanceof Error ? err.message : "Failed to upload photo.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function removeAvatar() {
+    setUploading(true);
+    setAvatarMsg(null);
+    try {
+      const supabase = (await import("@/lib/supabase/client")).createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.storage.from("avatars").remove([`${user.id}/avatar.jpg`, `${user.id}/avatar.png`, `${user.id}/avatar.webp`]);
+      }
+      const api = await getBankApi();
+      const { error } = await api.updateProfile({ avatar_url: null });
+      if (error) throw new Error(error.message);
+      setAvatarUrl(null);
+      onChanged?.();
+      router.refresh();
+    } catch (err) {
+      setAvatarMsg(err instanceof Error ? err.message : "Failed to remove photo.");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function save(e: FormEvent) {
     e.preventDefault();
@@ -130,6 +198,52 @@ export function ProfileClient({
         </form>
 
         <div className="space-y-4">
+          <div className="card p-6">
+            <h2 className="font-bold text-usaa-900">Profile photo</h2>
+            <div className="mt-4 flex items-center gap-4">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="h-16 w-16 rounded-full object-cover ring-2 ring-usaa-100"
+                />
+              ) : (
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-usaa-700 text-lg font-bold text-white">
+                  {profile
+                    ? initials(profile.first_name, profile.last_name)
+                    : "U"}
+                </div>
+              )}
+              <div className="min-w-0">
+                <label className="btn-secondary inline-flex cursor-pointer">
+                  <Camera className="h-4 w-4" />
+                  {uploading ? "Saving…" : "Upload photo"}
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={uploadAvatar}
+                  />
+                </label>
+                {avatarUrl && (
+                  <button
+                    onClick={removeAvatar}
+                    disabled={uploading}
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-crimson-600 hover:underline disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> Remove photo
+                  </button>
+                )}
+                <p className="mt-2 text-xs text-slate-400">
+                  JPG, PNG or WebP · up to 4MB
+                </p>
+                {avatarMsg && (
+                  <p className="mt-1 text-xs font-semibold text-red-600">{avatarMsg}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="card p-6">
             <h2 className="font-bold text-usaa-900">Membership</h2>
             <dl className="mt-4 space-y-3 text-sm">

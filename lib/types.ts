@@ -16,6 +16,7 @@ export interface Profile {
   ssn_last4: string | null;
   member_since: string;
   military_branch: string | null;
+  avatar_url: string | null;
 }
 
 export interface Account {

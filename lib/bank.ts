@@ -33,6 +33,9 @@ export interface BankApi {
   getCardsByAccount(accountId: string): Promise<Card[]>;
   getHoldings(): Promise<InvestmentHolding[]>;
   getAlerts(): Promise<AlertItem[]>;
+  getRecentAlerts(limit?: number): Promise<AlertItem[]>;
+  getUnreadAlertCount(): Promise<number>;
+  markAllAlertsRead(): Promise<OpResult>;
   getAlertPrefs(): Promise<AlertPreference | null>;
   setAlertPrefs(p: Partial<AlertPreference>): Promise<OpResult>;
   markAlertRead(id: string): Promise<OpResult>;
@@ -91,7 +94,13 @@ function makeRealApi(supabase: ReturnType<typeof createClient>): BankApi {
       return (data ?? null) as Profile | null;
     },
     async updateProfile(p) {
-      const { error } = await supabase.from("profiles").update(p).eq("user_id", p.id ?? "");
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        return { error: { message: "You must be signed on to update your profile." } };
+      }
+      const { error } = await supabase.from("profiles").update(p).eq("user_id", user.id);
       return { error };
     },
     async getAccounts() {
@@ -135,6 +144,28 @@ function makeRealApi(supabase: ReturnType<typeof createClient>): BankApi {
     },
     async getAlerts() {
       return select<AlertItem>("alerts");
+    },
+    async getRecentAlerts(limit = 8) {
+      const { data } = await supabase
+        .from("alerts")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      return (data ?? []) as AlertItem[];
+    },
+    async getUnreadAlertCount() {
+      const { count } = await supabase
+        .from("alerts")
+        .select("id", { count: "exact", head: true })
+        .eq("read", false);
+      return count ?? 0;
+    },
+    async markAllAlertsRead() {
+      const { error } = await supabase
+        .from("alerts")
+        .update({ read: true })
+        .eq("read", false);
+      return { error };
     },
     async getAlertPrefs() {
       const { data } = await supabase.from("alert_preferences").select("*").maybeSingle();
@@ -230,7 +261,23 @@ function makeRealApi(supabase: ReturnType<typeof createClient>): BankApi {
       return { error };
     },
     async deleteCard(id) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const { data: card } = await supabase
+        .from("cards")
+        .select("card_last4")
+        .eq("id", id)
+        .maybeSingle();
       const { error } = await supabase.from("cards").delete().eq("id", id);
+      if (!error && user) {
+        await supabase.from("alerts").insert({
+          user_id: user.id,
+          title: "Card deleted",
+          message: `Card ending in ${card?.card_last4 ?? "••••"} was permanently deleted.`,
+          severity: "info",
+        });
+      }
       return { error };
     },
     async fileDispute(d) {
