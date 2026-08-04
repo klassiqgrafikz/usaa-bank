@@ -22,9 +22,11 @@ import {
   Search,
   X,
   CheckCheck,
+  Settings2,
 } from "lucide-react";
 import { getBankApi } from "@/lib/bank";
 import { initials, timeAgo, cn } from "@/lib/utils";
+import { TawkWidget } from "@/components/banking/tawk-widget";
 import type { AlertItem, Profile } from "@/lib/types";
 
 const nav = [
@@ -76,10 +78,12 @@ function SidebarNav({
   pathname,
   signOut,
   onClose,
+  showAdmin,
 }: {
   pathname: string;
   signOut: () => void;
   onClose?: () => void;
+  showAdmin: boolean;
 }) {
   return (
     <>
@@ -132,6 +136,15 @@ function SidebarNav({
             onClick={onClose}
           />
         ))}
+        {showAdmin && (
+          <SidebarLink
+            href="/admin"
+            label="Admin"
+            icon={Settings2}
+            pathname={pathname}
+            onClick={onClose}
+          />
+        )}
       </nav>
       <div className="border-t border-white/10 p-4">
         <button
@@ -240,7 +253,11 @@ export function BankShell({
   return (
     <div className="flex min-h-screen bg-slate-50">
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col bg-usaa-900 lg:flex">
-        <SidebarNav pathname={pathname} signOut={signOut} />
+        <SidebarNav
+          pathname={pathname}
+          signOut={signOut}
+          showAdmin={!!profile?.is_admin}
+        />
       </aside>
 
       {menuOpen && (
@@ -255,6 +272,7 @@ export function BankShell({
               pathname={pathname}
               signOut={signOut}
               onClose={() => setMenuOpen(false)}
+              showAdmin={!!profile?.is_admin}
             />
           </aside>
         </div>
@@ -393,6 +411,8 @@ export function BankShell({
           reserved.
         </footer>
       </div>
+
+      <TawkWidget />
     </div>
   );
 }

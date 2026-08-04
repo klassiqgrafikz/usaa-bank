@@ -236,6 +236,18 @@ function makeRealApi(supabase: ReturnType<typeof createClient>): BankApi {
       if (!user) {
         return { error: { message: "You must be signed on to make a deposit." } };
       }
+      const { data: account } = await supabase
+        .from("accounts")
+        .select("restricted")
+        .eq("id", accountId)
+        .maybeSingle();
+      if (account?.restricted) {
+        return {
+          error: {
+            message: "This account is restricted and cannot receive deposits.",
+          },
+        };
+      }
       const { error } = await supabase.from("transactions").insert({
         account_id: accountId,
         user_id: user.id,

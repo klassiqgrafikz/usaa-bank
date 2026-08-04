@@ -74,6 +74,26 @@ export default function AccountDetailPage() {
         subtitle={titleCase(account.type.replace("_", " "))}
       />
 
+      {account.restricted && (
+        <div className="mb-6 rounded-md border border-crimson-200 bg-crimson-50 px-4 py-3">
+          <p className="text-sm font-bold text-crimson-700">
+            This account is restricted
+          </p>
+          <p className="mt-0.5 text-sm text-crimson-600">
+            {account.restriction_reason ??
+              "No reason was provided by our support team."}
+            {account.restriction_until && (
+              <>
+                {" "}
+                Restriction is scheduled to lift on{" "}
+                {formatDate(account.restriction_until)}.
+              </>
+            )}{" "}
+            You cannot send money from this account.
+          </p>
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <div className="card overflow-hidden">

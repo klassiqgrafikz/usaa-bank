@@ -17,6 +17,7 @@ export interface Profile {
   member_since: string;
   military_branch: string | null;
   avatar_url: string | null;
+  is_admin: boolean;
 }
 
 export interface Account {
@@ -33,6 +34,9 @@ export interface Account {
   apy: number | null;
   status: AccountStatus;
   opened_at: string;
+  restricted: boolean;
+  restriction_reason: string | null;
+  restriction_until: string | null;
 }
 
 export interface Transaction {
@@ -163,4 +167,21 @@ export interface Dispute {
   reason: string;
   status: "submitted" | "in_review" | "resolved";
   created_at: string;
+}
+
+export interface AppSettings {
+  id: number;
+  maintenance_mode: boolean;
+  tawk_enabled: boolean;
+  tawk_property_id: string | null;
+  tawk_widget_id: string | null;
+  tawk_full_link: string | null;
+  updated_at: string;
+}
+
+export interface AdminStats {
+  total_accounts: number;
+  restricted_count: number;
+  maintenance_mode: boolean;
+  tawk_enabled: boolean;
 }

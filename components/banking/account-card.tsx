@@ -43,8 +43,16 @@ export function AccountCard({ account }: { account: Account }) {
   return (
     <Link
       href={`/bank/accounts/${account.id}`}
-      className="group rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+      className="group relative rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
     >
+      {account.restricted && (
+        <span
+          className="absolute right-4 top-4 rounded-full bg-crimson-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-crimson-600"
+          title={account.restriction_reason ?? "Restricted"}
+        >
+          Restricted
+        </span>
+      )}
       <div className="flex items-center justify-between">
         <div
           className={cn(
