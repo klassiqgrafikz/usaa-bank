@@ -62,7 +62,7 @@ export default function AccountsPage() {
               <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">
                 {labels[type]}
               </h2>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-5 sm:grid-cols-2">
                 {list.map((account) => (
                   <AccountCard key={account.id} account={account} />
                 ))}
