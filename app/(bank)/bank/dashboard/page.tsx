@@ -52,11 +52,7 @@ export default function DashboardPage() {
   const chartData = buildChartData(accounts, transactions);
 
   const totalAvailable = accounts.reduce(
-    (sum, a) =>
-      sum +
-      (a.type === "credit_card" && a.credit_limit_cents
-        ? a.credit_limit_cents - a.balance_cents
-        : a.available_cents),
+    (sum, a) => sum + a.available_cents,
     0,
   );
 
@@ -153,7 +149,9 @@ export default function DashboardPage() {
                     </p>
                   </div>
                   <p className="text-sm font-bold text-usaa-900">
-                    {a.type === "credit_card" || a.type === "loan" ? "-" : ""}
+                    {(a.type === "credit_card" || a.type === "loan") && a.balance_cents > 0
+                      ? "-"
+                      : ""}
                     {formatCurrency(Math.abs(a.balance_cents))}
                   </p>
                 </Link>

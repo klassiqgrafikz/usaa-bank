@@ -38,9 +38,9 @@ begin
     (u, 'Performance First Savings', 'savings',
      format('%s %s %s %s', substr(gen, 17, 4), substr(gen, 21, 4), substr(gen, 25, 4), substr(gen, 29, 4)),
      '314074269', 0, 0, null, null, 4.35, current_date),
-    (u, 'USAA Rewards Visa Platinum', 'credit_card',
-     format('%s %s %s %s', substr(gen, 2, 4), substr(gen, 6, 4), substr(gen, 10, 4), substr(gen, 14, 4)),
-     '314074269', 0, 0, 500000, 24.99, null, current_date),
+(u, 'USAA Rewards Visa Platinum', 'credit_card',
+      format('%s %s %s %s', substr(gen, 2, 4), substr(gen, 6, 4), substr(gen, 10, 4), substr(gen, 14, 4)),
+      '314074269', 0, 0, null, 24.99, null, current_date),
     (u, 'USAA Retirement Fund', 'investment',
      format('%s %s %s %s', substr(gen, 3, 4), substr(gen, 7, 4), substr(gen, 11, 4), substr(gen, 15, 4)),
      '314074269', 0, 0, null, null, null, current_date);

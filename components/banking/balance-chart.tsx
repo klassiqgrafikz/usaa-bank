@@ -36,7 +36,14 @@ export function BalanceChart({
             tick={{ fontSize: 12, fill: "#64748b" }}
             axisLine={false}
             tickLine={false}
-            tickFormatter={(v: number) => `$${(v / 100).toFixed(0)}k`}
+            tickFormatter={(v: number) =>
+              new Intl.NumberFormat("en-US", {
+                style: "currency",
+                currency: "USD",
+                notation: "compact",
+                maximumFractionDigits: 1,
+              }).format(v / 100)
+            }
           />
           <Tooltip
             formatter={(v) =>

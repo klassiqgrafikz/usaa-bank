@@ -127,9 +127,9 @@ export function TransactionsClient({
       <div className="card mt-4 p-4">
         <div className="grid gap-3 md:grid-cols-5">
           <div className="relative md:col-span-2">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
-              className="input pl-9"
+              className="input pl-10"
               placeholder="Search by merchant or description"
               value={query}
               onChange={(e) => setQuery(e.target.value)}

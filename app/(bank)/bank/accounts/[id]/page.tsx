@@ -85,7 +85,7 @@ export default function AccountDetailPage() {
                 </span>
               </div>
               <p className="mt-8 text-4xl font-extrabold">
-                {isOwed ? "-" : ""}
+                {isOwed && account.balance_cents > 0 ? "-" : ""}
                 {formatCurrency(Math.abs(account.balance_cents))}
               </p>
               <p className="mt-1 text-sm text-slate-300">
@@ -150,7 +150,9 @@ export default function AccountDetailPage() {
             <div className="card p-5">
               <h2 className="font-bold text-usaa-900">Credit card</h2>
               <dl className="mt-4 space-y-3 text-sm">
-                <Row label="Credit limit">{formatCurrency(account.credit_limit_cents!)}</Row>
+                {account.credit_limit_cents != null && (
+                  <Row label="Credit limit">{formatCurrency(account.credit_limit_cents)}</Row>
+                )}
                 <Row label="Available">{formatCurrency(available)}</Row>
                 <Row label="Balance">{formatCurrency(account.balance_cents)}</Row>
                 <Row label="Min. payment due">
@@ -257,6 +259,7 @@ function ActionCta({
 }
 
 function minPayment(balance: number) {
+  if (balance <= 0) return 0;
   return Math.max(Math.round(balance * 0.02), 2500);
 }
 

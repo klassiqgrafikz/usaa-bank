@@ -66,7 +66,7 @@ export function AccountCard({ account }: { account: Account }) {
         {account.name}
       </p>
       <p className="mt-1 text-2xl font-extrabold text-usaa-900">
-        {isOwed ? "-" : ""}
+        {isOwed && value > 0 ? "-" : ""}
         {formatCurrency(Math.abs(value), { showSign: value > 0 })}
       </p>
       <div className="mt-3 flex items-center justify-between text-xs">
