@@ -16,6 +16,7 @@ declare
   u uuid := auth.uid();
   ch uuid; sv uuid; cc uuid; iv uuid;
   gen text;
+  ch_num text; sv_num text; cc_num text; iv_num text;
 begin
   if u is null then
     raise exception 'not authenticated';
@@ -25,25 +26,26 @@ begin
     return;
   end if;
 
-  -- Real, unique account numbers for this member.
+  -- Realistic digit-only account numbers for this member (10-digit deposit
+  -- and investment accounts, 16-digit credit card), derived from the uuid
+  -- so every member gets a unique set.
   gen := replace(gen_random_uuid()::text, '-', '');
-
+  ch_num := lpad((('x' || substr(gen, 1, 10))::bit(40)::bigint % 10000000000)::text, 10, '0');
+  sv_num := lpad((('x' || substr(gen, 11, 10))::bit(40)::bigint % 10000000000)::text, 10, '0');
+  cc_num := lpad((('x' || substr(gen, 1, 14))::bit(56)::bigint % 10000000000000000)::text, 16, '0');
+  iv_num := lpad((('x' || substr(gen, 17, 10))::bit(40)::bigint % 10000000000)::text, 10, '0');
   insert into public.accounts
     (user_id, name, type, account_number, routing_number,
      balance_cents, available_cents, credit_limit_cents, apr, apy, opened_at)
   values
-    (u, 'Secure Checking', 'checking',
-     format('%s %s %s %s', substr(gen, 1, 4), substr(gen, 5, 4), substr(gen, 9, 4), substr(gen, 13, 4)),
-     '314074269', 0, 0, null, null, 0.10, current_date),
-    (u, 'Performance First Savings', 'savings',
-     format('%s %s %s %s', substr(gen, 17, 4), substr(gen, 21, 4), substr(gen, 25, 4), substr(gen, 29, 4)),
-     '314074269', 0, 0, null, null, 4.35, current_date),
-(u, 'USAA Rewards Visa Platinum', 'credit_card',
-      format('%s %s %s %s', substr(gen, 2, 4), substr(gen, 6, 4), substr(gen, 10, 4), substr(gen, 14, 4)),
-      '314074269', 0, 0, null, 24.99, null, current_date),
-    (u, 'USAA Retirement Fund', 'investment',
-     format('%s %s %s %s', substr(gen, 3, 4), substr(gen, 7, 4), substr(gen, 11, 4), substr(gen, 15, 4)),
-     '314074269', 0, 0, null, null, null, current_date);
+    (u, 'Secure Checking', 'checking', ch_num,
+     '107236411', 0, 0, null, null, 0.10, current_date),
+    (u, 'Performance First Savings', 'savings', sv_num,
+     '107236411', 0, 0, null, null, 4.35, current_date),
+    (u, 'USAA Rewards Visa Platinum', 'credit_card', cc_num,
+     '107236411', 0, 0, null, 24.99, null, current_date),
+    (u, 'USAA Retirement Fund', 'investment', iv_num,
+     '107236411', 0, 0, null, null, null, current_date);
 
   select id into ch from public.accounts where user_id = u and type = 'checking';
   select id into sv from public.accounts where user_id = u and type = 'savings';
@@ -51,9 +53,9 @@ begin
   select id into iv from public.accounts where user_id = u and type = 'investment';
 
   insert into public.cards (user_id, account_id, card_last4, brand, card_type, status, expires) values
-    (u, ch, right(gen, 4), 'Visa', 'debit', 'active',
+    (u, ch, right(ch_num, 4), 'Visa', 'debit', 'active',
      to_char(current_date + interval '4 years', 'MM/YY')),
-    (u, cc, substr(gen, 4, 4), 'Visa', 'credit', 'active',
+    (u, cc, right(cc_num, 4), 'Visa', 'credit', 'active',
      to_char(current_date + interval '4 years', 'MM/YY'));
 
   insert into public.alert_preferences (user_id) values (u)

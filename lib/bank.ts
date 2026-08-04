@@ -63,7 +63,12 @@ export interface BankApi {
     note?: string | null;
   }): Promise<OpResult>;
   addZelleContact(c: { name: string; emailOrPhone: string; bank?: string | null }): Promise<OpResult>;
-  makeDeposit(args: { accountId: string; amountCents: number }): Promise<OpResult>;
+  depositCheck(args: {
+    accountId: string;
+    amountCents: number;
+    frontImage: File;
+    backImage: File;
+  }): Promise<OpResult>;
   setCardStatus(id: string, status: string): Promise<OpResult>;
   fileDispute(d: { ref: string; amountCents: number; reason: string }): Promise<OpResult>;
 }
@@ -193,13 +198,51 @@ function makeRealApi(supabase: ReturnType<typeof createClient>): BankApi {
       const { error } = await supabase.from("zelle_contacts").insert({ name: c.name, email_or_phone: c.emailOrPhone, bank: c.bank ?? null });
       return { error };
     },
-    async makeDeposit({ accountId, amountCents }) {
-      const { error } = await supabase.from("transactions").insert({
-        account_id: accountId, description: "Mobile check deposit", merchant: "Mobile Deposit",
-        category: "Income", amount_cents: amountCents, status: "pending",
-        posted_at: new Date().toISOString(), reference: "DEP-" + Date.now().toString().slice(-6),
+    async depositCheck({ accountId, amountCents, frontImage, backImage }) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        return { error: { message: "You must be signed on to deposit a check." } };
+      }
+
+      const ext = () =>
+        (frontImage.name.split(".").pop() ?? "jpg").toLowerCase();
+      const frontKey = `${user.id}/${crypto.randomUUID()}.${ext()}`;
+      const backKey = `${user.id}/${crypto.randomUUID()}.${ext()}`;
+
+      const upload = async (key: string, file: File) => {
+        const { error } = await supabase.storage.from("check-images").upload(
+          key,
+          file,
+          {
+            contentType: file.type || "application/octet-stream",
+          },
+        );
+        return error;
+      };
+
+      const frontError = await upload(frontKey, frontImage);
+      if (frontError) {
+        return { error: { message: `Couldn't upload the check front: ${frontError.message}` } };
+      }
+      const backError = await upload(backKey, backImage);
+      if (backError) {
+        await supabase.storage.from("check-images").remove([frontKey]);
+        return { error: { message: `Couldn't upload the check back: ${backError.message}` } };
+      }
+
+      const { error } = await supabase.rpc("deposit_check", {
+        p_account: accountId,
+        p_amount: amountCents,
+        p_front_image: frontKey,
+        p_back_image: backKey,
       });
-      return { error };
+      if (error) {
+        await supabase.storage.from("check-images").remove([frontKey, backKey]);
+        return { error };
+      }
+      return { error: null };
     },
     async setCardStatus(id, status) {
       const { error } = await supabase.rpc("set_card_status", { p_card: id, p_status: status });

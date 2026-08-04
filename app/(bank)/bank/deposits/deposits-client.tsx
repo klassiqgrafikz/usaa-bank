@@ -1,10 +1,103 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { Camera, CheckCircle2, MapPin } from "lucide-react";
+import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import Image from "next/image";
+import { Camera, CheckCircle2, ImagePlus, MapPin, X } from "lucide-react";
 import { PageHeader } from "@/components/banking/page-header";
 import { getBankApi } from "@/lib/bank";
 import type { Account } from "@/lib/types";
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const ACCEPTED = ["image/jpeg", "image/png", "image/heic", "image/webp"];
+
+function CheckUpload({
+  side,
+  file,
+  preview,
+  onPick,
+  onRemove,
+}: {
+  side: "front" | "back";
+  file: File | null;
+  preview: string | null;
+  onPick: (f: File | null) => void;
+  onRemove: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function handleChange(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0] ?? null;
+    e.target.value = "";
+    onPick(f);
+  }
+
+  return (
+    <div
+      className={
+        file && preview
+          ? "rounded-lg border-2 border-emerald-500 bg-emerald-50/40 p-3"
+          : "rounded-lg border-2 border-dashed border-slate-300 p-3 hover:border-usaa-400"
+      }
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/heic,image/webp"
+        className="hidden"
+        onChange={handleChange}
+      />
+      {file && preview ? (
+        <div>
+          <div className="relative">
+            <div className="relative h-36 w-full overflow-hidden rounded-md">
+              <Image
+                src={preview}
+                alt={`${side} of check`}
+                fill
+                unoptimized
+                sizes="100%"
+                className="object-cover"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={onRemove}
+              aria-label={`Remove ${side} of check`}
+              className="absolute right-2 top-2 rounded-full bg-slate-900/70 p-1 text-white hover:bg-slate-900"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-2 text-xs">
+            <span className="flex min-w-0 items-center gap-1 font-semibold text-emerald-700">
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{file.name}</span>
+            </span>
+            <button type="button" onClick={() => inputRef.current?.click()} className="link shrink-0">
+              Replace
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="flex w-full flex-col items-center justify-center gap-2 rounded-md p-6 text-sm font-medium text-slate-500 hover:text-usaa-700"
+        >
+          {side === "front" ? (
+            <ImagePlus className="h-6 w-6" />
+          ) : (
+            <Camera className="h-6 w-6" />
+          )}
+          {side === "front" ? "Add front of check" : "Add back of check"}
+          <span className="text-xs text-slate-400">
+            JPG, PNG, HEIC or WebP · up to 10&nbsp;MB
+          </span>
+        </button>
+      )}
+    </div>
+  );
+}
 
 export function DepositsClient({
   accounts,
@@ -17,11 +110,44 @@ export function DepositsClient({
 
   const [targetId, setTargetId] = useState(depositTargets[0]?.id ?? "");
   const [amount, setAmount] = useState("");
-  const [front, setFront] = useState(false);
-  const [back, setBack] = useState(false);
+  const [front, setFront] = useState<File | null>(null);
+  const [frontPreview, setFrontPreview] = useState<string | null>(null);
+  const [back, setBack] = useState<File | null>(null);
+  const [backPreview, setBackPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function pickFile(
+    side: "front" | "back",
+    file: File | null,
+    setFile: (f: File | null) => void,
+    setPreview: (u: string | null) => void,
+  ) {
+    setError(null);
+    if (!file) return;
+    if (!ACCEPTED.includes(file.type)) {
+      setError(`${side === "front" ? "Front" : "Back"} image must be a JPG, PNG, HEIC or WebP photo.`);
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setError("Check images must be 10 MB or smaller.");
+      return;
+    }
+    setFile(file);
+    setPreview(URL.createObjectURL(file));
+  }
+
+  function removeFile(
+    side: "front" | "back",
+    setFile: (f: File | null) => void,
+    setPreview: (u: string | null) => void,
+  ) {
+    setFile(null);
+    if (side === "front" && frontPreview) URL.revokeObjectURL(frontPreview);
+    if (side === "back" && backPreview) URL.revokeObjectURL(backPreview);
+    setPreview(null);
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -32,14 +158,16 @@ export function DepositsClient({
       return;
     }
     if (!front || !back) {
-      setError("Add the front and back of the check.");
+      setError("Add a photo of the front and back of the check.");
       return;
     }
     setSubmitting(true);
     const api = await getBankApi();
-    const { error: insertError } = await api.makeDeposit({
+    const { error: insertError } = await api.depositCheck({
       accountId: targetId,
       amountCents: cents,
+      frontImage: front,
+      backImage: back,
     });
     setSubmitting(false);
     if (insertError) {
@@ -84,30 +212,20 @@ export function DepositsClient({
           </div>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={() => setFront(true)}
-              className={
-                front
-                  ? "flex items-center justify-center gap-2 rounded-lg border-2 border-emerald-500 bg-emerald-50 p-6 text-sm font-semibold text-emerald-700"
-                  : "flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 p-6 text-sm font-medium text-slate-500 hover:border-usaa-400"
-              }
-            >
-              {front ? <CheckCircle2 className="h-5 w-5" /> : <Camera className="h-5 w-5" />}
-              {front ? "Front added" : "Add front of check"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setBack(true)}
-              className={
-                back
-                  ? "flex items-center justify-center gap-2 rounded-lg border-2 border-emerald-500 bg-emerald-50 p-6 text-sm font-semibold text-emerald-700"
-                  : "flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 p-6 text-sm font-medium text-slate-500 hover:border-usaa-400"
-              }
-            >
-              {back ? <CheckCircle2 className="h-5 w-5" /> : <Camera className="h-5 w-5" />}
-              {back ? "Back added" : "Add back of check"}
-            </button>
+            <CheckUpload
+              side="front"
+              file={front}
+              preview={frontPreview}
+              onPick={(f) => pickFile("front", f, setFront, setFrontPreview)}
+              onRemove={() => removeFile("front", setFront, setFrontPreview)}
+            />
+            <CheckUpload
+              side="back"
+              file={back}
+              preview={backPreview}
+              onPick={(f) => pickFile("back", f, setBack, setBackPreview)}
+              onRemove={() => removeFile("back", setBack, setBackPreview)}
+            />
           </div>
 
           {error && (
@@ -120,7 +238,7 @@ export function DepositsClient({
           )}
 
           <button type="submit" disabled={submitting} className="btn-primary mt-5 w-full">
-            {submitting ? "Submitting…" : "Submit deposit"}
+            {submitting ? "Uploading check…" : "Submit deposit"}
           </button>
         </form>
 
