@@ -114,9 +114,11 @@ export interface Card {
   account_id: string;
   card_last4: string;
   brand: string;
-  card_type: "debit" | "credit";
-  status: "active" | "locked" | "lost" | "stolen";
+  card_type: "debit" | "credit" | "virtual";
+  status: "active" | "locked" | "lost" | "stolen" | "frozen";
   expires: string;
+  card_number?: string | null;
+  cvv?: string | null;
 }
 
 export interface InvestmentHolding {

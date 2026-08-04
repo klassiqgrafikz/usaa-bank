@@ -65,6 +65,11 @@ export interface BankApi {
   addZelleContact(c: { name: string; emailOrPhone: string; bank?: string | null }): Promise<OpResult>;
   addDeposit(args: { accountId: string; amountCents: number }): Promise<OpResult>;
   setCardStatus(id: string, status: string): Promise<OpResult>;
+  issueVirtualCard(args: {
+    accountId: string;
+    network: "Visa" | "Mastercard";
+  }): Promise<OpResult>;
+  deleteCard(id: string): Promise<OpResult>;
   fileDispute(d: { ref: string; amountCents: number; reason: string }): Promise<OpResult>;
 }
 
@@ -215,6 +220,17 @@ function makeRealApi(supabase: ReturnType<typeof createClient>): BankApi {
     },
     async setCardStatus(id, status) {
       const { error } = await supabase.rpc("set_card_status", { p_card: id, p_status: status });
+      return { error };
+    },
+    async issueVirtualCard({ accountId, network }) {
+      const { error } = await supabase.rpc("issue_virtual_card", {
+        p_account: accountId,
+        p_network: network,
+      });
+      return { error };
+    },
+    async deleteCard(id) {
+      const { error } = await supabase.from("cards").delete().eq("id", id);
       return { error };
     },
     async fileDispute(d) {
