@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { jsPDF } from "jspdf";
 import { Download, Search } from "lucide-react";
 import { PageHeader } from "@/components/banking/page-header";
 import { TransactionList } from "@/components/banking/transaction-row";
@@ -70,27 +71,67 @@ export function TransactionsClient({
     .filter((t) => t.amount_cents < 0)
     .reduce((s, t) => s + t.amount_cents, 0);
 
-  function downloadCsv() {
-    const rows = [
-      ["Date", "Description", "Merchant", "Category", "Status", "Account", "Amount"],
-      ...filtered.map((tx) => [
+  function downloadPdf() {
+    const doc = new jsPDF();
+    doc.setFillColor(17, 24, 39);
+    doc.rect(0, 0, 210, 28, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("USAA Bank \u2014 Account Transactions", 14, 13);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(203, 213, 225);
+    doc.text(`Generated ${new Date().toLocaleString("en-US")}`, 14, 20);
+
+    const headers = ["Date", "Description", "Merchant", "Category", "Status", "Account", "Amount"];
+    const widths = [24, 44, 30, 24, 18, 34, 24];
+    const startY = 40;
+    const rowH = 7;
+    let y = startY;
+
+    doc.setFillColor(240, 171, 0);
+    doc.rect(10, y, 190, rowH, "F");
+    doc.setTextColor(17, 24, 39);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    let x = 12;
+    headers.forEach((h, i) => {
+      doc.text(h, x, y + 5);
+      x += widths[i];
+    });
+    y += rowH;
+
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(51, 65, 85);
+    filtered.forEach((tx, idx) => {
+      if (y > 285) {
+        doc.addPage();
+        y = 20;
+      }
+      if (idx % 2 === 1) {
+        doc.setFillColor(241, 245, 249);
+        doc.rect(10, y, 190, rowH, "F");
+      }
+      x = 12;
+      const cells = [
         tx.posted_at,
         tx.description,
         tx.merchant ?? "",
         tx.category,
         tx.status,
         accountName.get(tx.account_id) ?? "",
-        (tx.amount_cents / 100).toFixed(2),
-      ]),
-    ];
-    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "transactions.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+        `$${(tx.amount_cents / 100).toFixed(2)}`,
+      ];
+      cells.forEach((c, i) => {
+        const text = c.length > widths[i] / 2.2 ? c.slice(0, Math.floor(widths[i] / 2.2) - 1) + "\u2026" : c;
+        doc.text(text, x, y + 5);
+        x += widths[i];
+      });
+      y += rowH;
+    });
+
+    doc.save("transactions.pdf");
   }
 
   return (
@@ -99,8 +140,8 @@ export function TransactionsClient({
         title="Transactions"
         subtitle="Search, filter and export your account activity."
         actions={
-          <button onClick={downloadCsv} className="btn-secondary">
-            <Download className="h-4 w-4" /> Download CSV
+          <button onClick={downloadPdf} className="btn-secondary">
+            <Download className="h-4 w-4" /> Download PDF
           </button>
         }
       />
