@@ -147,30 +147,26 @@ export function welcomeEmail(
   };
 }
 
-export function recoveryEmail(link: string): { subject: string; html: string } {
+export function resetCodeEmail(code: string): { subject: string; html: string } {
   return {
-    subject: "Reset your USAA password",
+    subject: `Your USAA password reset code is ${code}`,
     html: shell(`
       <h1 style="margin:0 0 8px;font-size:22px;font-weight:800;">Reset your password</h1>
-      <p style="margin:0 0 20px;color:${SLATE};">
+      <p style="margin:0 0 22px;color:${SLATE};">
         We received a request to reset the password on your USAA online banking
-        account. Tap the button below to choose a new one. This link expires in
-        30 minutes.
+        account. Enter this 6-digit code to choose a new one. It expires in
+        10 minutes.
       </p>
-      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 22px;">
-        <tr>
-          <td align="center" style="border-radius:8px;">
-            <a href="${link}" style="display:inline-block;padding:14px 28px;background-color:${CRIMSON};color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;border-radius:8px;">Choose a new password</a>
-          </td>
-        </tr>
-      </table>
+      <div style="text-align:center;padding:18px 12px;margin:0 0 20px;background-color:${LIGHT};border-radius:10px;border:1px solid #d8e6f6;">
+        <span style="font-size:34px;font-weight:800;letter-spacing:10px;color:${NAVY};">${code}</span>
+      </div>
       <p style="margin:0 0 6px;color:${SLATE};">
-        If the button doesn't work, copy and paste this link into your browser:
-      </p>
-      <p style="margin:0 0 18px;font-size:12px;word-break:break-all;color:${NAVY_SOFT};">${link}</p>
-      <p style="margin:0;color:${SLATE};">
         If you didn't request this, you can safely ignore this email — your
         password won't change.
+      </p>
+      <p style="margin:0;color:${SLATE};">
+        <strong style="color:${NAVY};">Don't share this code with anyone.</strong>
+        USAA will never call or text you asking for your code.
       </p>
     `),
   };

@@ -1,11 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { recoveryEmail, sendEmail, welcomeEmail } from "@/lib/email";
+import { sendEmail, welcomeEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
-
-const EMAIL_TYPES = ["signup", "recovery"] as const;
-type EmailType = (typeof EMAIL_TYPES)[number];
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -23,10 +20,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Invalid request." }, { status: 400 });
   }
 
-  const type = body.type as EmailType;
+  const type = body.type;
   const email = (body.email ?? "").trim().toLowerCase();
 
-  if (!EMAIL_TYPES.includes(type)) {
+  if (type !== "signup") {
     return NextResponse.json({ ok: false, error: "Unknown email type." }, { status: 400 });
   }
   if (!isValidEmail(email)) {
@@ -37,39 +34,21 @@ export async function POST(request: NextRequest) {
 
   try {
     const admin = createAdminClient();
-    const redirectTo = `${origin}/auth/callback?next=${
-      type === "recovery" ? "/reset-password" : "/bank/dashboard"
-    }`;
+    const redirectTo = `${origin}/auth/callback?next=/bank/dashboard`;
 
-    const { data, error } =
-      type === "recovery"
-        ? await admin.auth.admin.generateLink({ type, email, options: { redirectTo } })
-        : await admin.auth.admin.generateLink({
-            type: "signup",
-            email,
-            password: " ",
-            options: { redirectTo },
-          });
+    const { data, error } = await admin.auth.admin.generateLink({
+      type: "signup",
+      email,
+      password: " ",
+      options: { redirectTo },
+    });
 
     let actionLink: string | null = null;
-    if (error) {
-      // If a link can't be minted (e.g. already-confirmed user), still send a
-      // link-free email rather than failing the resend.
-      if (type === "recovery") {
-        return NextResponse.json(
-          { ok: false, error: error.message },
-          { status: 400 },
-        );
-      }
-    } else {
+    if (!error) {
       actionLink = data?.properties?.action_link ?? null;
     }
 
-    const tpl =
-      type === "recovery"
-        ? recoveryEmail(actionLink ?? `${origin}/login`)
-        : welcomeEmail(body.firstName ?? "", actionLink);
-
+    const tpl = welcomeEmail(body.firstName ?? "", actionLink);
     const result = await sendEmail({
       to: email,
       subject: tpl.subject,
