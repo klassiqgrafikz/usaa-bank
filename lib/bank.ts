@@ -54,6 +54,8 @@ export interface BankApi {
   }): Promise<{
     error: { message: string } | null;
     transferId: string | null;
+    recipientName?: string | null;
+    recipientFound?: boolean;
   }>;
   createBillPayment(args: {
     payeeId: string;
@@ -209,7 +211,19 @@ function makeRealApi(supabase: ReturnType<typeof createClient>): BankApi {
               p_note: args.note ?? null,
               p_external_account: args.externalAccount ?? null,
             });
-      return { error: rpc.error, transferId: rpc.data ?? null };
+      const data = rpc.data;
+      let transferId: string | null = null;
+      let recipientName: string | null = null;
+      let recipientFound = false;
+      if (typeof data === "string") {
+        transferId = data;
+      } else if (data && typeof data === "object") {
+        const d = data as { transfer_id?: string; recipient_name?: string; recipient_found?: boolean };
+        transferId = d.transfer_id ?? null;
+        recipientName = d.recipient_name ?? null;
+        recipientFound = d.recipient_found ?? false;
+      }
+      return { error: rpc.error, transferId, recipientName, recipientFound };
     },
     async createBillPayment({ payeeId, fromId, amountCents, schedule = "one_time", frequency = null }) {
       const { error } = await supabase.rpc("make_bill_payment", {

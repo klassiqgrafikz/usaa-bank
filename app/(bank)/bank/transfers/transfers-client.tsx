@@ -1,14 +1,16 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { jsPDF } from "jspdf";
-import { CheckCircle2, Download, X } from "lucide-react";
+import { BadgeCheck, CheckCircle2, Download, Loader2, X } from "lucide-react";
 import { PageHeader } from "@/components/banking/page-header";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { getBankApi } from "@/lib/bank";
+import { createClient } from "@/lib/supabase/client";
 import type { Account, Transfer } from "@/lib/types";
 
 type Dest = "internal" | "external" | "wire";
+type LookupState = "idle" | "checking" | "found" | "missing";
 
 interface Confirmation {
   transferId: string;
@@ -40,6 +42,7 @@ export function TransfersClient({
   );
   const [externalName, setExternalName] = useState("");
   const [externalAcct, setExternalAcct] = useState("");
+  const [lookup, setLookup] = useState<LookupState>("idle");
   const [amount, setAmount] = useState("");
   const [schedule, setSchedule] = useState<"one_time" | "recurring">("one_time");
   const [frequency, setFrequency] = useState("monthly");
@@ -47,23 +50,51 @@ export function TransfersClient({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
+  const lookupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const historyByAcct = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const t of transfers) {
-      if (t.external_account && !map.has(t.external_account)) {
-        map.set(t.external_account, t.external_name ?? "");
+  const supabase = createClient();
+
+  useEffect(() => {
+    return () => {
+      if (lookupTimer.current) clearTimeout(lookupTimer.current);
+    };
+  }, []);
+
+  async function lookUpMember(acct: string) {
+    setLookup("checking");
+    try {
+      const { data } = await supabase.rpc("lookup_member_by_account", {
+        p_account_number: acct,
+      }) as { data: { found: boolean; name?: string } | null };
+      if (externalAcct !== acct) return;
+      if (data?.found && data.name) {
+        setExternalName(data.name);
+        setLookup("found");
+      } else {
+        setExternalName("");
+        setLookup("missing");
       }
+    } catch {
+      if (externalAcct !== acct) return;
+      setLookup("missing");
     }
-    return map;
-  }, [transfers]);
+  }
 
-  function onAcctChange(value: string) {
-    const clean = value.replace(/\s/g, "");
+  function onAcctChange(value: string, isWire: boolean) {
+    const clean = value.replace(/\D/g, "");
     setExternalAcct(clean);
-    const known = historyByAcct.get(clean);
-    if (known) {
-      setExternalName(known);
+    if (isWire) {
+      setLookup("idle");
+      return;
+    }
+    if (lookupTimer.current) clearTimeout(lookupTimer.current);
+    if (clean.length === 10 || clean.length === 16) {
+      lookupTimer.current = setTimeout(() => {
+        void lookUpMember(clean);
+      }, 400);
+    } else {
+      setExternalName("");
+      setLookup("idle");
     }
   }
 
@@ -91,19 +122,39 @@ export function TransfersClient({
           frequency: schedule === "recurring" ? frequency : null,
           note: note || null,
         });
-      } else {
+      } else if (dest === "wire") {
         res = await api.createTransfer({
           internal: false,
           fromId,
           externalName:
             externalName +
-            (dest === "wire" && externalAcct ? ` (ACCT •${externalAcct.slice(-4)})` : ""),
+            (externalAcct ? ` (ACCT •${externalAcct.slice(-4)})` : ""),
           externalAccount: externalAcct || undefined,
           amountCents: cents,
           schedule,
           frequency: schedule === "recurring" ? frequency : null,
           note: note || null,
-          isWire: dest === "wire",
+          isWire: true,
+        });
+      } else {
+        if (!externalAcct) {
+          setError("Enter the recipient account number.");
+          return;
+        }
+        if (lookup !== "found") {
+          setError("Account not found. Enter a valid USAA member account number.");
+          return;
+        }
+        res = await api.createTransfer({
+          internal: false,
+          fromId,
+          externalName,
+          externalAccount: externalAcct,
+          amountCents: cents,
+          schedule,
+          frequency: schedule === "recurring" ? frequency : null,
+          note: note || null,
+          isWire: false,
         });
       }
 
@@ -292,27 +343,43 @@ export function TransfersClient({
                   <input
                     className="input"
                     value={externalAcct}
-                    onChange={(e) => onAcctChange(e.target.value)}
-                    onBlur={() => {
-                      const known = historyByAcct.get(externalAcct);
-                      if (known) setExternalName(known);
-                    }}
+                    onChange={(e) => onAcctChange(e.target.value, dest === "wire")}
                     placeholder="Enter full account number"
                     inputMode="numeric"
+                    required
                   />
-                  <p className="mt-1 text-xs text-slate-400">
-                    Name auto-fills from your transfer history.
-                  </p>
+                  {dest === "wire" ? (
+                    <p className="mt-1 text-xs text-slate-400">
+                      Name is entered manually for wire transfers.
+                    </p>
+                  ) : lookup === "checking" ? (
+                    <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
+                      <Loader2 className="h-3 w-3 animate-spin" /> Checking our member directory…
+                    </p>
+                  ) : lookup === "found" ? (
+                    <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-emerald-600">
+                      <BadgeCheck className="h-3 w-3" /> Verified USAA member
+                    </p>
+                  ) : lookup === "missing" ? (
+                    <p className="mt-1 text-xs text-slate-400">
+                      No member account matches this number.
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs text-slate-400">
+                      Enter a full account number to verify the recipient.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="label">
-                    {dest === "wire" ? "Recipient name" : "External bank / account name"}
+                    {dest === "wire" ? "Recipient name" : "Recipient name"}
                   </label>
                   <input
-                    className="input"
+                    className={cn("input", lookup === "found" && "border-emerald-300 bg-emerald-50")}
                     value={externalName}
                     onChange={(e) => setExternalName(e.target.value)}
-                    placeholder={dest === "wire" ? "Recipient" : "e.g. Chase checking"}
+                    placeholder={dest === "wire" ? "Recipient" : "Auto-fills when verified"}
+                    disabled={dest !== "wire" && lookup === "found"}
                     required
                   />
                 </div>
