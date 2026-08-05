@@ -62,7 +62,8 @@ export default function DashboardPage() {
         subtitle="Here's what's happening with your money today."
       />
 
-      <div className="-mx-4 rounded-none border-b border-white/10 bg-gradient-to-br from-usaa-800 to-usaa-950 p-5 text-white shadow-sm sm:mx-0 sm:rounded-xl sm:border-0 sm:p-8">
+      <div className="-mx-4 sm:mx-0">
+        <div className="mx-4 rounded-2xl bg-gradient-to-br from-usaa-800 to-usaa-950 p-5 text-white shadow-sm sm:mx-0 sm:rounded-xl sm:p-8">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <p className="text-sm font-medium text-slate-300">Total balance</p>
@@ -231,6 +232,7 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </>
   );
