@@ -150,7 +150,7 @@ export default function AccountDetailPage() {
                 <CopyValue value={account.routing_number} ariaLabel="Copy routing number" />
               </Row>
               <Row label="Opened">
-                {formatDate(account.opened_at)}
+                {formatDate(account.created_at)}
               </Row>
               {account.apy != null && (
                 <Row label="Dividend rate (APY)">

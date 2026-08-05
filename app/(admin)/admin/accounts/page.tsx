@@ -18,6 +18,7 @@ export default function AdminAccountsPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [editing, setEditing] = useState<Record<string, string>>({});
+  const [editingCreated, setEditingCreated] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
 
   async function load() {
@@ -58,6 +59,45 @@ export default function AdminAccountsPage() {
     });
   }
 
+  function startEditCreated(accountId: string, createdAt: string) {
+    setError(null);
+    setEditingCreated((e) => ({ ...e, [accountId]: toLocalInput(createdAt) }));
+  }
+
+  function cancelEditCreated(accountId: string) {
+    setEditingCreated((e) => {
+      const n = { ...e };
+      delete n[accountId];
+      return n;
+    });
+  }
+
+  async function saveEditCreated(accountId: string) {
+    const raw = editingCreated[accountId];
+    if (!raw) return;
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) {
+      setError("Enter a valid created date and time.");
+      return;
+    }
+    setSavingId(accountId);
+    setError(null);
+    setMessage(null);
+    const api = await getAdminApi();
+    const res = await api.updateAccountCreated({
+      accountId,
+      createdAt: parsed.toISOString(),
+    });
+    setSavingId(null);
+    if (res.error) {
+      setError(res.error.message);
+      return;
+    }
+    setMessage("Account created date updated.");
+    cancelEditCreated(accountId);
+    load();
+  }
+
   async function saveEdit(accountId: string, userId: string) {
     const raw = editing[accountId];
     if (!raw) return;
@@ -89,7 +129,7 @@ export default function AdminAccountsPage() {
       <h1 className="text-xl font-bold text-usaa-900">All accounts</h1>
       <p className="mt-1 text-sm text-slate-500">
         Every account created plus each member&apos;s membership date. You can
-        edit the membership date, year and time directly.
+        edit the created date and the membership date, year and time directly.
       </p>
 
       {error && (
@@ -110,7 +150,7 @@ export default function AdminAccountsPage() {
           <p className="px-6 py-8 text-sm text-slate-400">No accounts yet.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-left text-sm">
+            <table className="w-full min-w-[1000px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-xs uppercase tracking-wider text-slate-400">
                   <th className="px-6 py-3 font-semibold">Member</th>
@@ -151,7 +191,49 @@ export default function AdminAccountsPage() {
                         {formatCurrency(r.available_cents)} available
                       </p>
                     </td>
-                    <td className="px-4 py-3 text-slate-500">{formatDate(r.created_at)}</td>
+                    <td className="px-4 py-3">
+                      {editingCreated[r.account_id] !== undefined ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="datetime-local"
+                            className="input py-1.5 text-sm"
+                            value={editingCreated[r.account_id]}
+                            onChange={(e) =>
+                              setEditingCreated((prev) => ({
+                                ...prev,
+                                [r.account_id]: e.target.value,
+                              }))
+                            }
+                          />
+                          <button
+                            onClick={() => saveEditCreated(r.account_id)}
+                            disabled={savingId === r.account_id}
+                            className="rounded-md bg-usaa-700 p-1.5 text-white transition-colors hover:bg-usaa-800 disabled:opacity-50"
+                            aria-label="Save created date"
+                          >
+                            <Check className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => cancelEditCreated(r.account_id)}
+                            className="rounded-md border border-slate-200 p-1.5 text-slate-500 transition-colors hover:bg-slate-50"
+                            aria-label="Cancel"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-slate-500">{formatDate(r.created_at)}</span>
+                          <button
+                            onClick={() => startEditCreated(r.account_id, r.created_at)}
+                            className="inline-flex items-center gap-1 rounded-md border border-slate-200 p-1 text-usaa-700 transition-colors hover:bg-usaa-50"
+                            aria-label="Edit created date"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       {editing[r.account_id] !== undefined ? (
                         <input

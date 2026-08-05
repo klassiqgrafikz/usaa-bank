@@ -120,7 +120,7 @@ export function AccountCard({ account }: { account: Account }) {
           </>
         )}
         <span className="text-slate-400">
-          Opened {formatDate(account.opened_at)}
+          Opened {formatDate(account.created_at)}
         </span>
       </div>
     </Link>

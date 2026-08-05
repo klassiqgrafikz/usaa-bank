@@ -9,6 +9,7 @@ export interface AdminApi {
   getStats(): Promise<AdminStats | null>;
   listAccounts(): Promise<{ rows: AdminAccountRow[]; error: { message: string } | null }>;
   updateMemberSince(args: { userId: string; memberSince: string }): Promise<OpResult>;
+  updateAccountCreated(args: { accountId: string; createdAt: string }): Promise<OpResult>;
   listRestrictions(): Promise<Account[]>;
   addFunds(args: {
     accountNumber: string;
@@ -60,6 +61,13 @@ function makeRealApi(supabase: ReturnType<typeof createClient>): AdminApi {
       const { error } = await supabase.rpc("admin_update_member_since", {
         p_user_id: userId,
         p_member_since: memberSince,
+      });
+      return { error };
+    },
+    async updateAccountCreated({ accountId, createdAt }) {
+      const { error } = await supabase.rpc("admin_update_account_created", {
+        p_account_id: accountId,
+        p_created_at: createdAt,
       });
       return { error };
     },

@@ -34,6 +34,7 @@ export interface Account {
   apy: number | null;
   status: AccountStatus;
   opened_at: string;
+  created_at: string;
   restricted: boolean;
   restriction_reason: string | null;
   restriction_until: string | null;
