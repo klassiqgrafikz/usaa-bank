@@ -23,17 +23,19 @@ export default function AdminAccountsPage() {
   async function load() {
     setLoading(true);
     const api = await getAdminApi();
-    const list = await api.listAccounts();
-    setRows(list);
+    const { rows, error } = await api.listAccounts();
+    setRows(error ? [] : rows);
+    setError(error ? error.message : null);
     setLoading(false);
   }
 
   useEffect(() => {
     let active = true;
     getAdminApi().then((api) =>
-      api.listAccounts().then((list) => {
+      api.listAccounts().then(({ rows, error }) => {
         if (active) {
-          setRows(list);
+          setRows(error ? [] : rows);
+          setError(error ? error.message : null);
           setLoading(false);
         }
       }),
@@ -104,7 +106,7 @@ export default function AdminAccountsPage() {
       <div className="card mt-6 overflow-hidden">
         {loading ? (
           <p className="px-6 py-8 text-sm text-slate-400">Loading…</p>
-        ) : rows.length === 0 ? (
+        ) : rows.length === 0 && !error ? (
           <p className="px-6 py-8 text-sm text-slate-400">No accounts yet.</p>
         ) : (
           <div className="overflow-x-auto">

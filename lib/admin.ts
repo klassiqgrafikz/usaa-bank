@@ -7,7 +7,7 @@ export interface AdminApi {
   getSettings(): Promise<AppSettings | null>;
   updateSettings(p: Partial<AppSettings>): Promise<OpResult>;
   getStats(): Promise<AdminStats | null>;
-  listAccounts(): Promise<AdminAccountRow[]>;
+  listAccounts(): Promise<{ rows: AdminAccountRow[]; error: { message: string } | null }>;
   updateMemberSince(args: { userId: string; memberSince: string }): Promise<OpResult>;
   listRestrictions(): Promise<Account[]>;
   addFunds(args: {
@@ -53,8 +53,8 @@ function makeRealApi(supabase: ReturnType<typeof createClient>): AdminApi {
       return (data ?? null) as AdminStats | null;
     },
     async listAccounts() {
-      const { data } = await supabase.rpc("admin_list_accounts");
-      return (data ?? []) as AdminAccountRow[];
+      const { data, error } = await supabase.rpc("admin_list_accounts");
+      return { rows: (data ?? []) as AdminAccountRow[], error };
     },
     async updateMemberSince({ userId, memberSince }) {
       const { error } = await supabase.rpc("admin_update_member_since", {
