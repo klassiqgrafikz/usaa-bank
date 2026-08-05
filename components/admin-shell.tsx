@@ -16,12 +16,12 @@ import {
 import { useState } from "react";
 
 const nav = [
-  { href: "/admin", label: "Overview", icon: LayoutDashboard },
-  { href: "/admin/accounts", label: "Accounts", icon: Users },
-  { href: "/admin/funds", label: "Add funds", icon: Wallet },
-  { href: "/admin/restrictions", label: "Restrictions", icon: ShieldAlert },
-  { href: "/admin/chat", label: "Live chat", icon: MessageSquare },
-  { href: "/admin/site", label: "Website", icon: Wrench },
+  { href: "/pages/admin", label: "Overview", icon: LayoutDashboard },
+  { href: "/pages/admin/accounts", label: "Accounts", icon: Users },
+  { href: "/pages/admin/funds", label: "Add funds", icon: Wallet },
+  { href: "/pages/admin/restrictions", label: "Restrictions", icon: ShieldAlert },
+  { href: "/pages/admin/chat", label: "Live chat", icon: MessageSquare },
+  { href: "/pages/admin/site", label: "Website", icon: Wrench },
 ] as const;
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -43,7 +43,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const sidebar = (
     <>
       <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
-        <Link href="/admin" onClick={closeMenu}>
+        <Link href="/pages/admin" onClick={closeMenu}>
           <span className="inline-flex items-center gap-2 text-xl font-extrabold text-white">
             <img
               src="/images/usaa-logo.svg"
@@ -65,8 +65,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
         {nav.map((item) => {
           const active =
-            item.href === "/admin"
-              ? pathname === "/admin"
+            item.href === "/pages/admin"
+              ? pathname === "/pages/admin"
               : pathname.startsWith(item.href);
           return (
             <Link

@@ -138,7 +138,7 @@ function SidebarNav({
         ))}
         {showAdmin && (
           <SidebarLink
-            href="/admin"
+            href="/pages/admin"
             label="Admin"
             icon={Settings2}
             pathname={pathname}
