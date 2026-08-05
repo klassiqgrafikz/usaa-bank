@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import type { Account, AdminStats, AppSettings } from "@/lib/types";
+import type { Account, AdminAccountRow, AdminStats, AppSettings } from "@/lib/types";
 
 type OpResult = { error: { message: string } | null };
 
@@ -7,6 +7,8 @@ export interface AdminApi {
   getSettings(): Promise<AppSettings | null>;
   updateSettings(p: Partial<AppSettings>): Promise<OpResult>;
   getStats(): Promise<AdminStats | null>;
+  listAccounts(): Promise<AdminAccountRow[]>;
+  updateMemberSince(args: { userId: string; memberSince: string }): Promise<OpResult>;
   listRestrictions(): Promise<Account[]>;
   addFunds(args: {
     accountNumber: string;
@@ -49,6 +51,17 @@ function makeRealApi(supabase: ReturnType<typeof createClient>): AdminApi {
     async getStats() {
       const { data } = await supabase.rpc("admin_stats");
       return (data ?? null) as AdminStats | null;
+    },
+    async listAccounts() {
+      const { data } = await supabase.rpc("admin_list_accounts");
+      return (data ?? []) as AdminAccountRow[];
+    },
+    async updateMemberSince({ userId, memberSince }) {
+      const { error } = await supabase.rpc("admin_update_member_since", {
+        p_user_id: userId,
+        p_member_since: memberSince,
+      });
+      return { error };
     },
     async listRestrictions() {
       const { data } = await supabase.rpc("admin_list_restrictions");

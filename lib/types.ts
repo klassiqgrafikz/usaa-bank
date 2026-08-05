@@ -186,3 +186,19 @@ export interface AdminStats {
   maintenance_mode: boolean;
   tawk_enabled: boolean;
 }
+
+export interface AdminAccountRow {
+  account_id: string;
+  user_id: string;
+  member_name: string;
+  email: string;
+  account_name: string;
+  account_type: string;
+  account_number: string;
+  routing_number: string;
+  balance_cents: number;
+  available_cents: number;
+  restricted: boolean;
+  created_at: string;
+  member_since: string;
+}

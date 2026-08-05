@@ -8,6 +8,7 @@ import {
   Wallet,
   MessageSquare,
   Wrench,
+  Users,
   LogOut,
   Menu,
   X,
@@ -16,6 +17,7 @@ import { useState } from "react";
 
 const nav = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
+  { href: "/admin/accounts", label: "Accounts", icon: Users },
   { href: "/admin/funds", label: "Add funds", icon: Wallet },
   { href: "/admin/restrictions", label: "Restrictions", icon: ShieldAlert },
   { href: "/admin/chat", label: "Live chat", icon: MessageSquare },
