@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { jsPDF } from "jspdf";
 import { Download, FileText } from "lucide-react";
 import { PageHeader } from "@/components/banking/page-header";
 import { formatCurrency } from "@/lib/utils";
@@ -33,7 +34,7 @@ export function StatementsClient({
     for (const a of accounts) {
       const rows: Statement[] = [];
       const now = new Date();
-      for (let i = 1; i <= 12; i++) {
+      for (let i = 0; i <= 12; i++) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const key = `${d.getFullYear()}-${d.getMonth()}`;
         const txs = transactions
@@ -46,18 +47,25 @@ export function StatementsClient({
         if (txs.length === 0) continue;
         const credits = txs.filter((t) => t.amount_cents > 0).reduce((s, t) => s + t.amount_cents, 0);
         const debits = txs.filter((t) => t.amount_cents < 0).reduce((s, t) => s + t.amount_cents, 0);
-        const end = txs.reduce((s, t) => s + t.amount_cents, 0);
+        const net = credits + debits;
         rows.push({
           accountId: a.id,
           accountName: a.name,
           month: d.toLocaleString("en-US", { month: "long", year: "numeric" }),
           monthStart: d.toISOString(),
           startBalance: 0,
-          endBalance: end,
+          endBalance: net,
           credits,
           debits,
           tx: txs,
         });
+      }
+      let runningEnd: number | null = null;
+      for (const s of rows) {
+        const end = runningEnd === null ? a.balance_cents : runningEnd;
+        s.endBalance = end;
+        s.startBalance = end - (s.credits + s.debits);
+        runningEnd = s.startBalance;
       }
       map.set(a.id, rows);
     }
@@ -87,9 +95,10 @@ export function StatementsClient({
         (t.amount_cents / 100).toFixed(2),
       ]),
       [],
+      ["Start balance", (stmt.startBalance / 100).toFixed(2)],
       ["Credits", (stmt.credits / 100).toFixed(2)],
       ["Debits", (stmt.debits / 100).toFixed(2)],
-      ["Period change", (stmt.endBalance / 100).toFixed(2)],
+      ["End balance", (stmt.endBalance / 100).toFixed(2)],
     ];
     const csv = rows
       .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
@@ -98,9 +107,101 @@ export function StatementsClient({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `statement-${stmt.accountName.replace(/\s+/g, "-").toLowerCase()}-${stmt.monthStart.slice(0, 7)}.${format === "pdf" ? "pdf" : "csv"}`;
+    a.download = `statement-${stmt.accountName.replace(/\s+/g, "-").toLowerCase()}-${stmt.monthStart.slice(0, 7)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function downloadPdf(stmt: Statement) {
+    const doc = new jsPDF();
+    doc.setFillColor(11, 35, 66);
+    doc.rect(0, 0, 210, 30, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.text("USAA", 14, 16);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text("ONLINE BANKING  ·  MONTHLY STATEMENT", 14, 23);
+    doc.setFillColor(240, 171, 0);
+    doc.rect(0, 30, 210, 3, "F");
+
+    doc.setTextColor(11, 35, 66);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text(stmt.accountName, 14, 44);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Statement period: ${stmt.month}`, 14, 51);
+    doc.text(`Generated ${new Date().toLocaleString("en-US")}`, 14, 57);
+
+    const headers = ["Date", "Description", "Category", "Status", "Amount"];
+    const widths = [34, 62, 38, 26, 28];
+    const startY = 68;
+    const rowH = 7;
+    let y = startY;
+
+    doc.setFillColor(240, 171, 0);
+    doc.rect(10, y, 190, rowH, "F");
+    doc.setTextColor(17, 24, 39);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    let x = 12;
+    headers.forEach((h, i) => {
+      doc.text(h, x, y + 5);
+      x += widths[i];
+    });
+    y += rowH;
+
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(51, 65, 85);
+    stmt.tx.forEach((t, idx) => {
+      if (y > 285) {
+        doc.addPage();
+        y = 20;
+      }
+      if (idx % 2 === 1) {
+        doc.setFillColor(241, 245, 249);
+        doc.rect(10, y, 190, rowH, "F");
+      }
+      x = 12;
+      const cells = [
+        t.posted_at,
+        t.description,
+        t.category,
+        t.status,
+        (t.amount_cents / 100).toFixed(2),
+      ];
+      cells.forEach((c, i) => {
+        const text = c.length > widths[i] / 2.2 ? c.slice(0, Math.floor(widths[i] / 2.2) - 1) + "\u2026" : c;
+        doc.text(text, x, y + 5);
+        x += widths[i];
+      });
+      y += rowH;
+    });
+
+    y += 6;
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(11, 35, 66);
+    const summary = [
+      ["Start balance", `$${(stmt.startBalance / 100).toFixed(2)}`],
+      ["Credits", `$${(stmt.credits / 100).toFixed(2)}`],
+      ["Debits", `$${(stmt.debits / 100).toFixed(2)}`],
+      ["End balance", `$${(stmt.endBalance / 100).toFixed(2)}`],
+    ] as const;
+    summary.forEach(([label, value]) => {
+      doc.setFontSize(9);
+      doc.text(label, 14, y);
+      doc.text(value, 196, y, { align: "right" });
+      doc.setDrawColor(226, 232, 240);
+      doc.line(14, y + 3, 196, y + 3);
+      y += 8;
+    });
+
+    doc.save(
+      `statement-${stmt.accountName.replace(/\s+/g, "-").toLowerCase()}-${stmt.monthStart.slice(0, 7)}.pdf`,
+    );
   }
 
   return (
@@ -135,7 +236,7 @@ export function StatementsClient({
                 <th>Account</th>
                 <th>Credits</th>
                 <th>Debits</th>
-                <th>Net change</th>
+                <th>Balances</th>
                 <th className="text-right">Action</th>
               </tr>
             </thead>
@@ -149,10 +250,16 @@ export function StatementsClient({
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-700">{formatCurrency(s.debits)}</td>
                   <td className="px-4 py-3 text-sm font-semibold text-usaa-900">
-                    {formatCurrency(s.endBalance, { showSign: true })}
+                    {formatCurrency(s.endBalance)}
+                    <span className="block text-xs font-normal text-slate-400">
+                      {formatCurrency(s.startBalance)} start
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button onClick={() => download(s)} className="btn-secondary px-3 py-1.5 text-xs">
+                    <button
+                      onClick={() => (format === "pdf" ? downloadPdf(s) : download(s))}
+                      className="btn-secondary px-3 py-1.5 text-xs"
+                    >
                       <Download className="h-3.5 w-3.5" /> Download
                     </button>
                   </td>

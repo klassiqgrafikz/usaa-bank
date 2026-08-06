@@ -7,7 +7,7 @@ export default function StatementsPage() {
   const { data, error } = useBankData(async (api) => {
     const [accounts, transactions] = await Promise.all([
       api.getAccounts(),
-      api.getTransactions(1000),
+      api.getTransactions(5000),
     ]);
     return { accounts, transactions };
   });
